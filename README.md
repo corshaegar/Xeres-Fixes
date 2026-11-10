@@ -64,7 +64,12 @@ underneath, so both keep working. Running it a second time finds nothing left to
 `Test\zeiger_test.py` checks the fix against the real script of the mod without starting the game. It takes `GOTHIC.DAT`
 from `Xeres_Scripts_DE.mod`, applies the fix byte by byte with the same rules as the script and verifies the result: exactly
 20 comparisons changed, no other byte touched, and a second run finds nothing more. Result with Xeres' Rückkehr 1.0.9:
-passed. **It has not been played in the game yet.**
+passed.
+
+**Confirmed in the game** on 10 November 2026 (Xeres' Rückkehr 1.0.9 with Union and GD3D11): in a test start where
+the co-op mod was told to leave the 20 places alone, it counted 20 open checks before the first game started and none after
+each of the following loads – the fix had changed all of them. Starting a new game, changing worlds, saving and loading all
+ran without problems.
 
 ## Building it yourself
 
@@ -148,7 +153,11 @@ darunter um – beide funktionieren dann weiter. Ein zweiter Lauf findet nichts 
 `Test\zeiger_test.py` prüft den Fix am echten Skript der Mod, ohne das Spiel zu starten. Er holt `GOTHIC.DAT` aus
 `Xeres_Scripts_DE.mod`, wendet den Fix Byte für Byte nach denselben Regeln an wie das Skript und prüft das Ergebnis: genau 20
 Vergleiche umgestellt, kein anderes Byte verändert, ein zweiter Lauf findet nichts mehr. Ergebnis mit Xeres' Rückkehr 1.0.9:
-bestanden. **Im Spiel ist er noch nicht gespielt.**
+bestanden.
+
+**Im Spiel bestätigt** am 10. November 2026 (Xeres' Rückkehr 1.0.9 mit Union und GD3D11): In einem Probestart ließ der
+Coop die 20 Stellen absichtlich unverändert. Vor dem ersten Spielstart zählte er 20 offene Prüfungen, nach jedem weiteren
+Laden keine mehr – der Fix hatte alle umgestellt. Neues Spiel, Weltwechsel, Speichern und Laden liefen ohne Probleme.
 
 ## Selbst bauen
 

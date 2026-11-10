@@ -9,4 +9,4 @@
   the pass into the Valley of Mines, the two doors of the spider burrow after Vino's conversation, the mine carts in the ice mine,
   taking items out of chests and removing objects.
 - Covers everything the earlier teleport fix of 17 October 2026 did (world changes and the pass); both can be installed together.
-- Checked against the real script of the mod (`Test\zeiger_test.py`); not yet played in the game.
+- Checked against the real script of the mod (`Test\zeiger_test.py`) and confirmed in the game: all 20 places get changed.

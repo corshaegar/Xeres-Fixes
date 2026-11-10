@@ -10,4 +10,4 @@
   Eismine, das Herausnehmen von Gegenständen aus Truhen und das Entfernen von Objekten.
 - Enthält alles, was der frühere Teleport-Fix vom 17. Oktober 2026 tat (Weltwechsel und Pass); beide können zusammen
   installiert sein.
-- Am echten Skript der Mod geprüft (`Test\zeiger_test.py`); im Spiel noch nicht gespielt.
+- Am echten Skript der Mod geprüft (`Test\zeiger_test.py`) und im Spiel bestätigt: Alle 20 Stellen werden umgestellt.
