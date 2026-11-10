@@ -8,7 +8,7 @@ ganzen Skript keine Zeiger-Pruefung "> 0" mehr in diesen Funktionen. Nur lesen."
 import argparse, os, re, struct, sys
 
 HIER = os.path.dirname(os.path.abspath(__file__))
-SKRIPT = os.path.join(HIER, '..', 'Quelltext', 'SYSTEM', 'AUTORUN', 'XERES_FIX_ZEIGER.D')
+SKRIPT = os.path.join(HIER, '..', 'Quelltext', 'SYSTEM', 'AUTORUN', 'XERES_FIXES.D')
 ERWARTET = 20
 
 
