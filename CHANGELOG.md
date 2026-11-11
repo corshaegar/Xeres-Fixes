@@ -2,6 +2,17 @@
 
 > *Deutsche Fassung: [CHANGELOG.de.md](CHANGELOG.de.md).*
 
+## 1.2.0 – Blood splatter back
+
+- **Keeps the blood splatter.** 1.1.0 stopped the crash by cutting the mod's own call of the blood splatter. Because LeGo 2.9
+  shows its splatter before the mod has worked out the damage, you then hardly saw any. 1.2.0 gives the mod's old blood splatter
+  function (from LeGo 2.5) back the first instruction that the Union Toolkit had replaced with a jump to LeGo 2.9. The mod's damage
+  function calls that function again: splatter for the damage actually dealt, no loop, no crash.
+- If the code does not look as expected, the fix falls back to what 1.1.0 did – no crash, but hardly any splatter.
+- No global script variable any more (a co-op mod would have sent it to the other player).
+- Checked against the real script of the mod (`Test\blut_test.py`, now with the Toolkit's jump rebuilt) and in the running game:
+  a staged hit from a bow came back without a loop, the mod dealt its damage, and the splatter showed exactly that damage.
+
 ## 1.1.0 – Blood splatter crash
 
 - **Fixes a crash when arrows hit you with blood splatter on.** It happens when the Union Toolkit (`Data\Toolkit.vdf`, brought

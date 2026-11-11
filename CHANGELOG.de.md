@@ -2,6 +2,19 @@
 
 > *English version: [CHANGELOG.md](CHANGELOG.md).*
 
+## 1.2.0 – Blutspritzer wieder da
+
+- **Die Blutspritzer bleiben.** 1.1.0 verhinderte den Absturz, indem es den Blutspritzer-Aufruf der Mod wegließ. Weil LeGo 2.9
+  seinen Spritzer zeigt, bevor die Mod den Schaden ausgerechnet hat, sah man danach kaum noch welche. 1.2.0 gibt der alten
+  Blutspritzer-Funktion der Mod (aus LeGo 2.5) den ersten Befehl zurück, den das Union-Toolkit durch einen Sprung auf LeGo 2.9
+  ersetzt hatte. Die Schadens-Funktion der Mod ruft wieder sie auf: Blutspritzer für den tatsächlichen Schaden, keine Schleife,
+  kein Absturz.
+- Sieht der Code nicht wie erwartet aus, macht der Fix es wie 1.1.0 – kein Absturz, aber kaum Blutspritzer.
+- Keine globale Skript-Variable mehr (ein Coop hätte sie an den Mitspieler geschickt).
+- Am echten Skript der Mod geprüft (`Test\blut_test.py`, jetzt mit nachgebautem Sprung des Toolkits) und im laufenden Spiel: Ein
+  nachgestellter Treffer aus dem Bogen kam ohne Schleife zurück, die Mod zog ihren Schaden ab, und der Blutspritzer zeigte genau
+  diesen Schaden.
+
 ## 1.1.0 – Absturz durch Blutspritzer
 
 - **Behebt einen Absturz, wenn einen Pfeile treffen und Blutspritzer an sind.** Er tritt auf, wenn das Union-Toolkit

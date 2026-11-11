@@ -5,7 +5,7 @@ META
   Engine = G2A;
 };
 
-// Xeres-Fixes 1.1.0 fuer Xeres' Rueckkehr 1.0.9 (10.11.2026)
+// Xeres-Fixes 1.2.0 fuer Xeres' Rueckkehr 1.0.9 (10.11.2026)
 //
 // 1. Zeiger-Pruefungen ueber 2 GB (seit 1.0.0)
 //
@@ -24,17 +24,21 @@ META
 // PTR). 0 bedeutet weiterhin "nicht gefunden". Er laeuft bei jedem Start und Laden mit, ein zweiter Lauf findet nichts mehr.
 // Ist eine Funktion per MergeMode ersetzt (z. B. durch den Teleport-Fix vom 17.10.), wird ihr Original <Name>_OLD umgestellt.
 //
-// 2. Absturz bei Fernkampftreffern mit Blutspritzern (neu in 1.1.0)
+// 2. Absturz bei Fernkampftreffern mit Blutspritzern (neu in 1.1.0, ab 1.2.0 mit Blutspritzern fuer den echten Schaden)
 //
-// Xeres startet LeGo immer mit Blutspritzern, und seine Schadens-Wahrnehmung des Helden B_AssessDamage_Hero ruft bei
-// "Blutspritzer: an" (Vorgabe) selbst _B_HeroDamage auf. Bringt ein Union-Plugin das Union-Toolkit mit (Data\Toolkit.vdf,
-// LeGo 2.9 - es ersetzt Xeres' LeGo 2.5), setzt dessen _Bloodsplats_Loop die Wahrnehmung des Helden auf _B_HeroDamage, und
-// das ruft danach die vorige auf - B_AssessDamage_Hero. Beide rufen sich dann gegenseitig auf. Aendert ein Treffer aus dem
-// Fernkampf das Leben nicht oder nur um 1 (etwa wenn der Held bewusstlos wuerde), geht das ohne Ende weiter: der Stapel laeuft
-// ueber, das Spiel stuerzt ab. Der Fix macht den Aufruf von _B_HeroDamage in B_AssessDamage_Hero zu einem Sprung auf den
-// naechsten Befehl - nur, wenn das neuere LeGo die Wahrnehmung verkettet (dann gibt es _B_HeroDamagePercFunc). Den Blutspritzer
-// zeigt dessen _B_HeroDamage ohnehin; Schaden, Gift und alles andere in B_AssessDamage_Hero laufen wie vorher. Ohne Union-Toolkit
-// aendert sich nichts.
+// Xeres startet LeGo immer mit Blutspritzern. Xeres' eigene LeGo-Schleife setzt die Schadens-Wahrnehmung des Helden auf
+// B_AssessDamage_Hero, und das ruft bei "Blutspritzer: an" (Vorgabe) nach dem eigenen Schaden selbst _B_HeroDamage auf - den
+// Blutspritzer. Bringt ein Union-Plugin das Union-Toolkit mit (Data\Toolkit.vdf, LeGo 2.9 - es ersetzt Xeres' LeGo 2.5, indem
+// es an den Anfang jeder alten Funktion einen Sprung auf die neue schreibt), setzt dessen _Bloodsplats_Loop die Wahrnehmung auf
+// _B_HeroDamage, und das ruft danach die vorige auf - B_AssessDamage_Hero. Beide rufen sich dann gegenseitig auf. Bei einem
+// Angreifer mit Bogen oder Armbrust geht das ohne Ende weiter: der Stapel laeuft ueber, das Spiel stuerzt ab.
+//
+// Der Fix gibt Xeres' alter Blutspritzer-Funktion (LeGo 2.5) den ersten Befehl zurueck, den das Toolkit durch den Sprung ersetzt
+// hat. B_AssessDamage_Hero ruft dann wieder sie auf: Sie zeigt den Blutspritzer fuer den echten Schaden und ruft nichts zurueck.
+// 1.1.0 machte den Aufruf nur zu einem Sprung auf den naechsten Befehl; dann zeigte allein LeGos neue Wahrnehmung einen
+// Blutspritzer, und zwar vor dem Schaden der Mod - fast immer fuer 0 oder 1 Lebenspunkt, also so gut wie keinen. Passt das
+// Muster nicht (andere Fassung), bleibt es beim Sprung: kein Absturz, aber kaum Blutspritzer. Nur, wenn das neuere LeGo die
+// Wahrnehmung verkettet (dann gibt es _B_HeroDamagePercFunc); ohne Union-Toolkit aendert sich nichts.
 //
 // Entfernen: Xeres_Fixes.vdf aus Data loeschen.
 
@@ -44,6 +48,8 @@ const int XRFIX_GT      = 8;
 const int XRFIX_NE      = 17;
 const int XRFIX_CALL    = 61;
 const int XRFIX_JMP     = 75;
+const int XRFIX_SETINST = 80;
+const int XRFIX_SUB     = 1;
 
 // Haelt die Variable mit dieser Symbolnummer einen Zeiger? (Name enthaelt "PTR")
 func int XRFIX_IstZeiger(var int sym)
@@ -169,7 +175,26 @@ func int XRFIX_Aufloesen(var int ziel)
 	return ziel;
 };
 
-// Aufrufe von _B_HeroDamage im Original einer Funktion (Befehl fuer Befehl) in einen Sprung auf den naechsten Befehl umstellen
+// Steht bei ziel (Abstand zum Anfang des Skriptcodes) Xeres' alte Blutspritzer-Funktion (LeGo 2.5), an deren Anfang das
+// Union-Toolkit einen Sprung geschrieben hat? Dahinter folgt unveraendert "PUSHVAR C_NPC.ATTRIBUTE, PUSHVAR HERO_LASTHP, SUB"
+// (currDam = Hero_LastHP - Leben des Helden); der ueberschriebene erste Befehl war "SETINST HERO"
+func int XRFIX_BlutAlt(var int ziel)
+{
+	if (ziel < 0) { return FALSE; };
+	var int adr; adr = MEM_Parser.stack_stack + ziel;
+	if (MEM_ReadByte(adr) != XRFIX_JMP) { return FALSE; };
+	if (MEM_ReadByte(adr + 5) != XRFIX_PUSHVAR) { return FALSE; };
+	if (MEM_ReadInt(adr + 6) != MEM_FindParserSymbol("C_NPC.ATTRIBUTE")) { return FALSE; };
+	if (MEM_ReadByte(adr + 10) != XRFIX_PUSHVAR) { return FALSE; };
+	if (MEM_ReadInt(adr + 11) != MEM_FindParserSymbol("HERO_LASTHP")) { return FALSE; };
+	if (MEM_ReadByte(adr + 15) != XRFIX_SUB) { return FALSE; };
+	if (MEM_FindParserSymbol("HERO") < 0) { return FALSE; };
+	return TRUE;
+};
+
+// Aufrufe von _B_HeroDamage im Original einer Funktion (Befehl fuer Befehl): Geht der Aufruf an die alte Fassung, die das Toolkit
+// per Sprung umleitet, bekommt sie ihren ersten Befehl zurueck, und der Aufruf bleibt (zaehlt 1000). Sonst wird er zu einem Sprung
+// auf den naechsten Befehl (zaehlt 1). Keine globale Variable - die gaebe ein Coop an den Mitspieler weiter
 func int XRFIX_BlutFunktion(var string name, var int laenge)
 {
 	var int start; start = XRFIX_Inhalt(ConcatStrings(name, "_OLD"));
@@ -181,6 +206,7 @@ func int XRFIX_BlutFunktion(var string name, var int laenge)
 	var int n; n = 0;
 	var int q; q = 0;
 	var int op;
+	var int direkt;
 	var int ziel;
 	var int schleife; schleife = MEM_StackPos.position;
 	if (q < laenge - 4)
@@ -188,12 +214,22 @@ func int XRFIX_BlutFunktion(var string name, var int laenge)
 		op = MEM_ReadByte(adr + q);
 		if (op == XRFIX_CALL)
 		{
-			ziel = XRFIX_Aufloesen(MEM_ReadInt(adr + q + 1));
+			direkt = MEM_ReadInt(adr + q + 1);
+			ziel = XRFIX_Aufloesen(direkt);
 			if (((ziel == z1) && (z1 >= 0)) || ((ziel == z2) && (z2 >= 0)))
 			{
-				MEM_WriteByte(adr + q, XRFIX_JMP);
-				MEM_WriteInt(adr + q + 1, start + q + 5);
-				n += 1;
+				if ((direkt != ziel) && XRFIX_BlutAlt(direkt))
+				{
+					MEM_WriteByte(MEM_Parser.stack_stack + direkt, XRFIX_SETINST);
+					MEM_WriteInt(MEM_Parser.stack_stack + direkt + 1, MEM_FindParserSymbol("HERO"));
+					n += 1000;
+				}
+				else
+				{
+					MEM_WriteByte(adr + q, XRFIX_JMP);
+					MEM_WriteInt(adr + q + 1, start + q + 5);
+					n += 1;
+				};
 			};
 		};
 		q += XRFIX_BefehlLaenge(op);
@@ -207,7 +243,11 @@ func void XRFIX_Blut()
 {
 	if (MEM_FindParserSymbol("_B_HERODAMAGEPERCFUNC") < 0) { return; };
 	var int n; n = XRFIX_BlutFunktion("B_ASSESSDAMAGE_HERO", 12486);
-	if (n > 0)
+	if (n >= 1000)
+	{
+		MEM_Info("Xeres-Fixes: Blutspritzer-Schleife behoben - B_AssessDamage_Hero ruft wieder Xeres' eigene Blutspritzer-Funktion");
+	}
+	else if (n > 0)
 	{
 		MEM_Info(ConcatStrings("Xeres-Fixes: Blutspritzer-Schleife entschaerft (B_AssessDamage_Hero): ", IntToString(n)));
 	};

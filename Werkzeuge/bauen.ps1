@@ -5,7 +5,7 @@
 param(
     [string]$Src = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Quelltext'),
     [string]$Out = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Bau\Xeres_Fixes.vdf'),
-    [string]$Comment = "Xeres-Fixes 1.1.0 - Zeiger-Pruefungen ueber 2 GB, Blutspritzer-Schleife (zParserExtender, 2026-11-10)",
+    [string]$Comment = "Xeres-Fixes 1.2.0 - Zeiger-Pruefungen ueber 2 GB, Blutspritzer-Schleife (zParserExtender, 2026-11-10)",
     [switch]$Test,
     [string]$Spiel = ''
 )

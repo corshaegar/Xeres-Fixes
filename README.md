@@ -25,12 +25,15 @@ treats a perfectly valid object as missing. What you notice depends on where it 
 These bugs come and go: where the game places an object in memory varies, so the same route can work once and fail the
 next time. The longer you play, the more memory the game uses and the more likely they become.
 
-**2. Crash when arrows hit you with blood splatter on** (new in 1.1.0). This one needs the Union Toolkit
-(`Data\Toolkit.vdf`), which several Union plugins bring along. It replaces the mod's LeGo 2.5 with LeGo 2.9, and LeGo 2.9
-handles damage to the hero differently: after showing the blood splatter it calls the mod's own damage function – which, with
-the option "Blutspritzer" on (the default), calls the blood splatter again. If a hit from a bow or crossbow leaves your health
-unchanged or takes just one point – for instance when it would knock you out – the two keep calling each other until the game
-crashes. Until now the only way around it was to switch blood splatter off in the menu.
+**2. Crash when arrows hit you with blood splatter on** (new in 1.1.0, blood splatter kept since 1.2.0). This one needs the
+Union Toolkit (`Data\Toolkit.vdf`), which several Union plugins bring along. It replaces the mod's LeGo 2.5 with LeGo 2.9, and
+LeGo 2.9 handles damage to the hero differently: after showing the blood splatter it calls the mod's own damage function –
+which, with the option "Blutspritzer" on (the default), calls the blood splatter again. If a hit from a bow or crossbow leaves
+your health unchanged or takes just one point (the mod then works out the real damage itself), the two keep calling each other
+until the game crashes. Until now the only way around it was to switch blood splatter off in the menu.
+
+Version 1.1.0 stopped the crash by cutting that second call, which also cost you most of the blood splatter: LeGo 2.9 shows its
+own splatter before the mod has worked out the damage, so it hardly ever appeared. 1.2.0 stops the crash and keeps the splatter.
 
 ## Installation
 
@@ -68,30 +71,37 @@ If another script has replaced one of these functions (the earlier teleport fix 
 underneath, so both keep working. Running it a second time finds nothing left to change. The zSpy log shows the line
 `Xeres-Fixes: Zeiger-Pruefungen umgestellt: 20` ("pointer checks changed: 20") once per game start.
 
-**Blood splatter:** if LeGo 2.9 or newer handles the damage reaction (it then has the variable `_B_HeroDamagePercFunc`), the fix
-turns the one call of `_B_HeroDamage` in the mod's damage function `B_AssessDamage_Hero` into a jump to the next instruction.
-LeGo still shows the blood splatter; damage, poison and everything else in that function work as before. Without the Union
-Toolkit nothing changes. zSpy shows `Xeres-Fixes: Blutspritzer-Schleife entschaerft (B_AssessDamage_Hero): 1`.
+**Blood splatter:** the Union Toolkit replaces the mod's LeGo functions by writing a jump to the new LeGo 2.9 code at the start
+of each old one. If LeGo 2.9 or newer handles the damage reaction (it then has the variable `_B_HeroDamagePercFunc`), the fix
+gives the mod's old blood splatter function (`_B_HeroDamage` from LeGo 2.5) its first instruction back. The mod's damage function
+`B_AssessDamage_Hero` then calls that old function again: it shows the splatter for the damage actually dealt and calls nothing
+back. Damage, poison and everything else in that function work as before. If the code does not look as expected, the fix falls
+back to what 1.1.0 did and turns the call into a jump to the next instruction – no crash, but hardly any splatter. Without the
+Union Toolkit nothing changes. zSpy shows `Xeres-Fixes: Blutspritzer-Schleife behoben - B_AssessDamage_Hero ruft wieder Xeres'
+eigene Blutspritzer-Funktion` ("blood splatter loop fixed – the damage function calls Xeres' own blood splatter again").
 
 ## Test status
 
 `Test\zeiger_test.py` and `Test\blut_test.py` check both fixes against the real script of the mod without starting the
 game. The pointer test takes `GOTHIC.DAT` from `Xeres_Scripts_DE.mod`, applies the fix byte by byte with the same rules as
 the script and verifies the result: exactly
-20 comparisons changed, no other byte touched, and a second run finds nothing more. The blood splatter test replays the
-change instruction by instruction: exactly one call in `B_AssessDamage_Hero`, only its five bytes changed, the jump lands on
-the next instruction, a second run finds nothing. Result with Xeres' Rückkehr 1.0.9: both passed.
+20 comparisons changed, no other byte touched, and a second run finds nothing more. The blood splatter test rebuilds the
+Union Toolkit's jump and replays the fix instruction by instruction: exactly one call in `B_AssessDamage_Hero`; the old blood
+splatter function gets its first instruction back and is then byte for byte the same as in the mod's script; the call itself
+stays; a second run finds nothing. It checks the fallback as well. Result with Xeres' Rückkehr 1.0.9: both passed.
 
 **Confirmed in the game** on 10 November 2026 (Xeres' Rückkehr 1.0.9 with Union and GD3D11): in a test start where
 the co-op mod was told to leave the 20 places alone, it counted 20 open checks before the first game started and none after
 each of the following loads – the fix had changed all of them. Starting a new game, changing worlds, saving and loading all
 ran without problems.
 
-The blood splatter fix was checked in the running game as well. With the Union Toolkit installed, LeGo 2.9 had indeed routed
-the hero's damage reaction into `B_AssessDamage_Hero`, which still called `_B_HeroDamage` – the loop behind the crash (the
-Toolkit replaces `_B_HeroDamage` by putting a jump to its new code at the old start, which the fix follows). Without the fix
-the co-op mod's check found that call and defused it itself; with the fix installed it found it already defused, on host and
-client alike. The test does not stage an actual arrow hit.
+The blood splatter fix was checked in the running game as well (10 and 11 November 2026, with the Union Toolkit installed).
+With LeGo 2.9 the hero's damage reaction was indeed routed into `B_AssessDamage_Hero`, which still called `_B_HeroDamage` –
+the loop behind the crash. The co-op mod's self-test then staged a hit from a bow: the hero with a drawn bow as the attacker,
+health left unchanged by the engine, and the damage reaction called the way the engine calls it after a hit. With the loop put
+back in place (as with the Toolkit and no fix), the reaction never came back: the game froze while the two functions kept
+calling each other. With this package alone, with the co-op mod alone and with both, it came back right away, the mod dealt its
+damage (5 to 30 points), and the blood splatter showed exactly that damage – on host and client alike.
 
 ## Building it yourself
 
@@ -137,12 +147,16 @@ ein gültiges Objekt für nicht vorhanden. Was man davon merkt, hängt von der S
 Die Fehler kommen und gehen: Wo das Spiel ein Objekt im Speicher ablegt, ist jedes Mal anders. Derselbe Weg kann einmal
 klappen und beim nächsten Mal nicht. Je länger man spielt und je mehr Speicher das Spiel belegt, desto häufiger treten sie auf.
 
-**2. Absturz, wenn einen Pfeile treffen und Blutspritzer an sind** (neu in 1.1.0). Dazu braucht es das Union-Toolkit
-(`Data\Toolkit.vdf`), das mehrere Union-Plugins mitbringen. Es ersetzt das LeGo 2.5 der Mod durch LeGo 2.9, und das behandelt
-Schaden am Helden anders: Nach dem Blutspritzer ruft es die Schadens-Funktion der Mod auf – und die ruft bei eingeschalteten
-Blutspritzern (Vorgabe) wieder den Blutspritzer auf. Ändert ein Treffer aus Bogen oder Armbrust die Lebenspunkte gar nicht oder
-nur um einen Punkt – etwa, wenn er einen bewusstlos schlagen würde –, rufen sich beide immer weiter auf, bis das Spiel abstürzt.
-Bisher half nur, die Blutspritzer im Menü auszuschalten.
+**2. Absturz, wenn einen Pfeile treffen und Blutspritzer an sind** (neu in 1.1.0, seit 1.2.0 mit Blutspritzern). Dazu braucht
+es das Union-Toolkit (`Data\Toolkit.vdf`), das mehrere Union-Plugins mitbringen. Es ersetzt das LeGo 2.5 der Mod durch LeGo 2.9,
+und das behandelt Schaden am Helden anders: Nach dem Blutspritzer ruft es die Schadens-Funktion der Mod auf – und die ruft bei
+eingeschalteten Blutspritzern (Vorgabe) wieder den Blutspritzer auf. Ändert ein Treffer aus Bogen oder Armbrust die Lebenspunkte
+gar nicht oder nur um einen Punkt (den eigentlichen Schaden rechnet dann die Mod selbst aus), rufen sich beide immer weiter auf,
+bis das Spiel abstürzt. Bisher half nur, die Blutspritzer im Menü auszuschalten.
+
+Version 1.1.0 verhinderte den Absturz, indem sie diesen zweiten Aufruf wegließ. Damit fehlten aber auch die meisten Blutspritzer:
+LeGo 2.9 zeigt seinen Spritzer, bevor die Mod den Schaden ausgerechnet hat, also so gut wie nie. 1.2.0 verhindert den Absturz und
+behält die Blutspritzer.
 
 ## Installation
 
@@ -181,29 +195,37 @@ Hat ein anderes Skript eine dieser Funktionen ersetzt (das tut der frühere Tele
 darunter um – beide funktionieren dann weiter. Ein zweiter Lauf findet nichts mehr. Im Log von zSpy steht je Start einmal
 `Xeres-Fixes: Zeiger-Pruefungen umgestellt: 20`.
 
-**Blutspritzer:** Behandelt LeGo 2.9 oder neuer den Schaden am Helden (es gibt dann die Variable `_B_HeroDamagePercFunc`), macht
-der Fix aus dem einen Aufruf von `_B_HeroDamage` in der Schadens-Funktion der Mod `B_AssessDamage_Hero` einen Sprung auf den
-nächsten Befehl. Den Blutspritzer zeigt weiterhin LeGo; Schaden, Gift und alles andere in dieser Funktion wirken wie bisher.
-Ohne Union-Toolkit ändert sich nichts. Im Log von zSpy steht `Xeres-Fixes: Blutspritzer-Schleife entschaerft (B_AssessDamage_Hero): 1`.
+**Blutspritzer:** Das Union-Toolkit ersetzt die LeGo-Funktionen der Mod, indem es an den Anfang jeder alten einen Sprung auf den
+neuen Code von LeGo 2.9 schreibt. Behandelt LeGo 2.9 oder neuer den Schaden am Helden (es gibt dann die Variable
+`_B_HeroDamagePercFunc`), gibt der Fix der alten Blutspritzer-Funktion der Mod (`_B_HeroDamage` aus LeGo 2.5) ihren ersten Befehl
+zurück. Die Schadens-Funktion der Mod `B_AssessDamage_Hero` ruft dann wieder sie auf: Sie zeigt den Blutspritzer für den
+tatsächlichen Schaden und ruft nichts zurück. Schaden, Gift und alles andere in dieser Funktion wirken wie bisher. Sieht der Code
+nicht wie erwartet aus, macht der Fix es wie 1.1.0 und wandelt den Aufruf in einen Sprung auf den nächsten Befehl um – kein
+Absturz, aber kaum Blutspritzer. Ohne Union-Toolkit ändert sich nichts. Im Log von zSpy steht `Xeres-Fixes: Blutspritzer-Schleife
+behoben - B_AssessDamage_Hero ruft wieder Xeres' eigene Blutspritzer-Funktion`.
 
 ## Teststand
 
 `Test\zeiger_test.py` und `Test\blut_test.py` prüfen beide Fixes am echten Skript der Mod, ohne das Spiel zu starten. Der
 Zeiger-Test holt `GOTHIC.DAT` aus `Xeres_Scripts_DE.mod`, wendet den Fix Byte für Byte nach denselben Regeln an wie das
 Skript und prüft das Ergebnis: genau 20
-Vergleiche umgestellt, kein anderes Byte verändert, ein zweiter Lauf findet nichts mehr. Der Blutspritzer-Test spielt die
-Umstellung Befehl für Befehl nach: genau ein Aufruf in `B_AssessDamage_Hero`, nur dessen fünf Bytes geändert, der Sprung landet
-auf dem nächsten Befehl, ein zweiter Lauf findet nichts. Ergebnis mit Xeres' Rückkehr 1.0.9: beide bestanden.
+Vergleiche umgestellt, kein anderes Byte verändert, ein zweiter Lauf findet nichts mehr. Der Blutspritzer-Test baut den Sprung
+des Union-Toolkits nach und spielt den Fix Befehl für Befehl nach: genau ein Aufruf in `B_AssessDamage_Hero`; die alte
+Blutspritzer-Funktion bekommt ihren ersten Befehl zurück und ist danach Byte für Byte wie im Skript der Mod; der Aufruf selbst
+bleibt; ein zweiter Lauf findet nichts. Auch der Rückfall wird geprüft. Ergebnis mit Xeres' Rückkehr 1.0.9: beide bestanden.
 
 **Im Spiel bestätigt** am 10. November 2026 (Xeres' Rückkehr 1.0.9 mit Union und GD3D11): In einem Probestart ließ der
 Coop die 20 Stellen absichtlich unverändert. Vor dem ersten Spielstart zählte er 20 offene Prüfungen, nach jedem weiteren
 Laden keine mehr – der Fix hatte alle umgestellt. Neues Spiel, Weltwechsel, Speichern und Laden liefen ohne Probleme.
 
-Der Blutspritzer-Fix ist ebenfalls im laufenden Spiel geprüft. Mit dem Union-Toolkit hatte LeGo 2.9 die Schadens-Wahrnehmung des
-Helden tatsächlich auf `B_AssessDamage_Hero` verkettet, das weiter `_B_HeroDamage` aufrief – die Schleife hinter dem Absturz (das
-Toolkit ersetzt `_B_HeroDamage`, indem es an den alten Anfang einen Sprung auf den neuen Code setzt; dem folgt der Fix). Ohne
-den Fix fand die Prüfung des Coops diesen Aufruf und entschärfte ihn selbst, mit dem Fix fand sie ihn schon entschärft – bei
-Host und Client. Einen echten Pfeiltreffer stellt der Test nicht nach.
+Der Blutspritzer-Fix ist ebenfalls im laufenden Spiel geprüft (10. und 11. November 2026, mit Union-Toolkit). Mit LeGo 2.9 war
+die Schadens-Wahrnehmung des Helden tatsächlich auf `B_AssessDamage_Hero` verkettet, das weiter `_B_HeroDamage` aufrief – die
+Schleife hinter dem Absturz. Der Selbsttest des Coops hat dann einen Treffer aus dem Bogen nachgestellt: der eigene Held mit
+gezogenem Bogen als Angreifer, die Lebenspunkte von der Engine unverändert, die Schadens-Wahrnehmung so aufgerufen, wie die
+Engine sie nach einem Treffer aufruft. Mit wieder eingesetzter Schleife (wie mit Toolkit ohne Fix) kam die Wahrnehmung nicht mehr
+zurück: Das Spiel stand, während sich beide Funktionen immer weiter aufriefen. Mit diesem Paket allein, mit dem Coop allein und
+mit beiden kam sie sofort zurück, die Mod zog ihren Schaden ab (5 bis 30 Punkte), und der Blutspritzer zeigte genau diesen
+Schaden – bei Host und Client.
 
 ## Selbst bauen
 
