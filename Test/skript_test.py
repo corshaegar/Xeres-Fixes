@@ -8,8 +8,9 @@ Ausdruecke), Zeichenketten ohne Backslash/Zeilenumbruch. Jeder Name muss in der 
 Instanzen) muessen zur Klasse gehoeren, Indizes in die Feldgroesse passen. Aufrufe: Anzahl der Argumente, Funktionsargumente
 (Parameter vom Typ func) muessen Funktionen sein, Zahlen nicht an Zeichenketten-Parameter. Zuweisungen an func-Felder nur mit
 Funktionen. Namen in Zeichenketten fuer MEM_FindParserSymbol und die XRFIX-Listen muessen im Skript stehen (sonst Hinweis, wenn
-der Fix ohne sie auskommt). Im Menue: items[] und onselaction_s[] nennen vorhandene Eintraege bzw. Menues, und die Seite
-MENU_OPT_XR hat im Original "Zurueck" an Stelle 15 und 16/17 frei. Nur lesen."""
+der Fix ohne sie auskommt). Im Menue: items[] und onselaction_s[] nennen vorhandene Eintraege bzw. Menues; die Seite MENU_OPT_XR
+hat im Original "Zurueck" an Stelle 15 und dahinter frei, und die neue Liste enthaelt jeden Eintrag des Originals genau einmal,
+ohne Luecke, mit der Ueberschrift vorn und "Zurueck" am Ende. Nur lesen."""
 import argparse, glob, os, re, struct, sys
 
 HIER = os.path.dirname(os.path.abspath(__file__))
@@ -673,8 +674,23 @@ def main():
             if 'MENU_OPT_XR' in pr.glob:
                 alt = lese_menue_items(menu, 'MENU_OPT_XR')
                 print('  MENU_OPT_XR im Original: %s' % (alt and ', '.join('%d=%s' % kv for kv in sorted(alt.items()))))
-                if not alt or alt.get(15) != 'MENUITEM_XR_BACK' or 16 in alt or 17 in alt:
-                    pr.f(0, 'MENU_OPT_XR: im Original steht "Zurueck" nicht an Stelle 15 oder 16/17 sind belegt')
+                if not alt or alt.get(15) != 'MENUITEM_XR_BACK' or max(alt) != 15:
+                    pr.f(0, 'MENU_OPT_XR: im Original steht "Zurueck" nicht an Stelle 15 oder dahinter ist belegt')
+                neu = dict(alt or {})
+                for feld, wert in pr.menue['MENU_OPT_XR'].items():
+                    m = re.match(r'items\[(\d+)\]$', feld)
+                    if m:
+                        neu[int(m.group(1))] = wert.upper()
+                print('  MENU_OPT_XR neu: %s' % ', '.join('%d=%s' % kv for kv in sorted(neu.items())))
+                werte = list(neu.values())
+                doppelt = sorted({w for w in werte if werte.count(w) > 1})
+                fehlt = sorted(set((alt or {}).values()) - set(werte))
+                if doppelt or fehlt:
+                    pr.f(0, 'MENU_OPT_XR: doppelt %s, fehlt %s' % (doppelt, fehlt))
+                if sorted(neu) != list(range(len(neu))):
+                    pr.f(0, 'MENU_OPT_XR: Luecke in items[] (%s)' % sorted(neu))
+                if neu.get(0) != (alt or {}).get(0) or neu.get(max(neu)) != 'MENUITEM_XR_BACK':
+                    pr.f(0, 'MENU_OPT_XR: Ueberschrift nicht vorn oder "Zurueck" nicht am Ende')
                 gfa = dat.by.get('MENU_ID_GFA')
                 if not gfa or gfa['content'] != [5]:
                     pr.f(0, 'MENU_ID_GFA ist nicht 5 - Zeile 6 der Seite ist vielleicht belegt')

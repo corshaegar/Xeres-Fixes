@@ -5,7 +5,7 @@ META
   Engine = G2A;
 };
 
-// Xeres-Fixes 1.3.0 fuer Xeres' Rueckkehr 1.0.9 (13.11.2026)
+// Xeres-Fixes 1.4.0 fuer Xeres' Rueckkehr 1.0.9 (13.11.2026)
 //
 // 1. Zeiger-Pruefungen ueber 2 GB (seit 1.0.0)
 //
@@ -62,6 +62,28 @@ META
 // (Scatty - der Weg zu den Gardisten) und das Versteck der Assassinen (Amir). Wer an einem davon mit voller Grenze vorbeikam,
 // bekommt nach dem Erhoehen bei derselben Person eine zweite Gelegenheit - nur, solange die Einstellung ueber 4 steht.
 //
+// 4. Gegner-KI "New Balance", einstellbar (neu in 1.4.0)
+//
+// Was ein Gegner im Nahkampf tut, steht in Gothics Kampftabellen (FIGHT.DAT): je Kampftaktik (FAI_*: Mensch feige, Ork, Snapper
+// ...) und Lage (19, z. B. "Gegner holt zum Schlag aus", "Gegner in Waffenreichweite und im Blick") bis zu sechs Zuege, aus denen
+// Gothic zufaellig waehlt - Angriff, Seitenangriff, Kombination, Parade, Zurueckspringen, Umkreisen, Warten. Optionen -> Speziell ->
+// Gegner-KI stellt zwischen Xeres' Tabellen und einer Kampfweise nach dem Vorbild von "Die Rueckkehr 2.0 - New Balance" um,
+// gespeichert in der Gothic.ini unter [XERES_FIXES] gegnerki (0 = Xeres wie im Original, 1 = New Balance). Vorgabe ist Xeres: Ohne
+// Eintrag kaempft alles wie bisher.
+//
+// Die Kampfweise "New Balance" leitet Werkzeuge\gegnerki_regeln.py mit eigenen Regeln aus Xeres' Tabellen ab, 39 Lagen in 11
+// Kampftaktiken: Menschen parieren Sturmangriffe, statt seitwaerts auszuweichen; wer umkreist wird, dreht sich zum Gegner, weicht
+// zurueck oder wartet ab (Menschen, Orks); Meister setzen Kombinationen ein, auch aus der Ferne; gegen Magier auf Distanz weichen
+// Meister und Orks seitlich aus; Minecrawler, Daemonen, Steingolems, Snapper und Zombies schlagen zurueck, wenn der Gegner ausholt,
+// und greifen in Reichweite oefter an; Orks warten seltener und greifen abwechslungsreicher an; Sumpfhaie verfolgen nicht.
+// Gothic laedt die Tabellen einmal beim Start in eine feste Liste (oCNpc::InitFightAI); der Fix schreibt dort die Zuege der
+// gewaehlten Fassung hinein - in eine Lage nur, wenn darin genau die Zuege der anderen Fassung stehen. Er stellt bei jedem Start und
+// Laden um und danach jede Sekunde: Xeres' DAUERFUNC_01 liest jede Sekunde Xeres' eigene Einstellung "Spielzeit"
+// (TimeSwitch = STR_ToInt(MEM_GetGothOpt("XERES", "spielzeit"))); dieser Aufruf von STR_ToInt geht jetzt an XRFIX_KiTakt, das die
+// Gegner-KI umstellt und dann STR_ToInt zurueckgibt (CALL, 5 Bytes wie vorher). Eine Aenderung im Menue gilt so nach spaetestens
+// einer Sekunde, auch mitten im Kampf. Was New Balance darueber hinaus mit seinem Plugin und eigenen Skripten am Kampf aendert, ist
+// nicht nachgebildet.
+//
 // Entfernen: Xeres_Fixes.vdf aus Data loeschen.
 
 const int XRFIX_PUSHINT = 64;
@@ -75,6 +97,7 @@ const int XRFIX_SUB     = 1;
 const int XRFIX_LT      = 7;
 const int XRFIX_EQ      = 16;
 const int XRFIX_GE      = 18;
+const int XRFIX_ASSIGN  = 9;
 
 // Haelt die Variable mit dieser Symbolnummer einen Zeiger? (Name enthaelt "PTR")
 func int XRFIX_IstZeiger(var int sym)
@@ -618,6 +641,224 @@ func void XRFIX_Dialoge()
 	};
 };
 
+// 4. Gegner-KI. Gothics Liste der Kampftabellen (oCNpc::InitFightAI, Adressen von Gothic 2 Die Nacht des Raben, Report-Version
+// 2.6): je Kampftaktik ein Zeiger auf 19 Lagen zu je 28 Bytes - 6 Zuege, dann ihre Anzahl, aus der
+// oCNpc::GetFightActionFromTable zufaellig waehlt (Taktik = Zeiger[npc.fight_tactic], Lage = Block[Lage])
+
+const int XRFIX_FIGHTAI_LISTE   = 11191928;   // 0x00AAC678 zCArray<oSFightAI*>: Daten, Platz, Anzahl
+const int XRFIX_FIGHTAI_ANZAHL  = 50;         // MAX_FIGHTAI in Xeres und New Balance: so viele Taktiken liest Gothic ein
+const int XRFIX_FIGHTAI_BLOCK   = 28;         // eine Lage: 6 Zuege, Anzahl
+const int XRFIX_FIGHTAI_ZAEHLER = 24;         // Abstand der Anzahl in der Lage
+
+// Gewaehlte Gegner-KI aus der Gothic.ini, [XERES_FIXES] gegnerki = Nummer der Auswahl im Menue: 0 = Xeres, 1 = New Balance.
+// Fehlt der Eintrag oder steht etwas anderes dort, gilt Xeres
+func int XRFIX_GegnerKiNB()
+{
+	if (Hlp_StrCmp(MEM_GetGothOpt("XERES_FIXES", "gegnerki"), "1")) { return TRUE; };
+	return FALSE;
+};
+
+// Sechs Zuege (MOVE_*, jeder unter 32) in einer Zahl, je 5 Bit - so bleibt jede Zeile der Tabelle kurz
+func int XRFIX_KiZuege(var int z0, var int z1, var int z2, var int z3, var int z4, var int z5)
+{
+	return z0 | (z1 << 5) | (z2 << 10) | (z3 << 15) | (z4 << 20) | (z5 << 25);
+};
+
+// Adresse einer Lage (0-18) einer Kampftaktik in Gothics Liste, 0 = Liste noch nicht geladen
+func int XRFIX_KiAdresse(var int taktik, var int lage)
+{
+	if (MEM_ReadInt(XRFIX_FIGHTAI_LISTE + 8) < XRFIX_FIGHTAI_ANZAHL) { return 0; };
+	var int daten; daten = MEM_ReadInt(XRFIX_FIGHTAI_LISTE);
+	if (!daten) { return 0; };
+	var int ki; ki = MEM_ReadInt(daten + 4 * taktik);
+	if (!ki) { return 0; };
+	return ki + XRFIX_FIGHTAI_BLOCK * lage;
+};
+
+// Stehen in der Lage genau diese sechs Zuege?
+func int XRFIX_KiGleich(var int adr, var int zuege)
+{
+	var int k; k = 0;
+	var int schleife; schleife = MEM_StackPos.position;
+	if (k < 6)
+	{
+		if (MEM_ReadInt(adr + 4 * k) != ((zuege >> (5 * k)) & 31)) { return FALSE; };
+		k += 1;
+		MEM_StackPos.position = schleife;
+	};
+	return TRUE;
+};
+
+// Sechs Zuege in die Lage schreiben und ihre Anzahl bis zum ersten leeren (wie Gothic beim Laden)
+func void XRFIX_KiSchreiben(var int adr, var int zuege)
+{
+	var int k; k = 0;
+	var int anzahl; anzahl = 6;
+	var int z;
+	var int schleife; schleife = MEM_StackPos.position;
+	if (k < 6)
+	{
+		z = (zuege >> (5 * k)) & 31;
+		MEM_WriteInt(adr + 4 * k, z);
+		if ((z == 0) && (anzahl == 6)) { anzahl = k; };
+		k += 1;
+		MEM_StackPos.position = schleife;
+	};
+	MEM_WriteInt(adr + XRFIX_FIGHTAI_ZAEHLER, anzahl);
+};
+
+// Eine Lage umstellen: auf die neuen Zuege ("New Balance") nur, wenn darin Xeres' Zuege stehen, zurueck nur, wenn darin die neuen
+// stehen. 1 = umgestellt, 0 = steht schon so (oder Liste nicht geladen, oder fremde Zuege - dann bleibt sie, wie sie ist)
+func int XRFIX_KiBlock(var int nb, var int taktik, var int lage, var int neuZuege, var int xrZuege)
+{
+	var int adr; adr = XRFIX_KiAdresse(taktik, lage);
+	if (!adr) { return 0; };
+	if (nb)
+	{
+		if (XRFIX_KiGleich(adr, xrZuege))
+		{
+			XRFIX_KiSchreiben(adr, neuZuege);
+			return 1;
+		};
+	}
+	else if (XRFIX_KiGleich(adr, neuZuege))
+	{
+		XRFIX_KiSchreiben(adr, xrZuege);
+		return 1;
+	};
+	return 0;
+};
+
+// ===== Gegner-KI New Balance: Tabellen (erzeugt von Werkzeuge\gegnerki_regeln.py - nicht von Hand aendern) =====
+// Je Zeile: Kampftaktik (FAI_*), Lage (0-18 wie oCNpc::InitFightAI), neue Zuege, Zuege von Xeres, dahinter die Regel.
+// MOVE_*: 1 RUN, 3 JUMPBACK, 4 TURN, 5 STRAFE, 6 ATTACK, 7 SIDEATTACK, 8 FRONTATTACK, 9 TRIPLEATTACK, 10 WHIRLATTACK,
+// 11 MASTERATTACK, 17 PARADE, 19 WAIT, 23 WAIT_LONGER, 24 WAIT_EXT
+func int XRFIX_KiTabellen(var int nb)
+{
+	var int n; n = 0;
+	n += XRFIX_KiBlock(nb, 2, 1, XRFIX_KiZuege(17, 3, 0, 0, 0, 0), XRFIX_KiZuege(5, 0, 0, 0, 0, 0));   // HUMAN_COWARD ENEMY_STORMPREHIT: Sturmangriff parieren
+	n += XRFIX_KiBlock(nb, 2, 5, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_COWARD MY_W_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 2, 10, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_COWARD MY_G_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 2, 11, XRFIX_KiZuege(1, 19, 0, 0, 0, 0), XRFIX_KiZuege(1, 5, 0, 0, 0, 0));   // HUMAN_COWARD MY_G_FOCUS: Mittlere Entfernung
+	n += XRFIX_KiBlock(nb, 3, 1, XRFIX_KiZuege(17, 0, 0, 0, 0, 0), XRFIX_KiZuege(5, 0, 0, 0, 0, 0));   // HUMAN_STRONG ENEMY_STORMPREHIT: Sturmangriff parieren
+	n += XRFIX_KiBlock(nb, 3, 5, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_STRONG MY_W_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 3, 10, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_STRONG MY_G_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 3, 11, XRFIX_KiZuege(1, 1, 19, 0, 0, 0), XRFIX_KiZuege(1, 1, 5, 0, 0, 0));   // HUMAN_STRONG MY_G_FOCUS: Mittlere Entfernung
+	n += XRFIX_KiBlock(nb, 4, 1, XRFIX_KiZuege(17, 0, 0, 0, 0, 0), XRFIX_KiZuege(5, 0, 0, 0, 0, 0));   // HUMAN_MASTER ENEMY_STORMPREHIT: Sturmangriff parieren
+	n += XRFIX_KiBlock(nb, 4, 5, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_MASTER MY_W_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 4, 6, XRFIX_KiZuege(8, 6, 9, 10, 11, 19), XRFIX_KiZuege(8, 6, 19, 0, 0, 0));   // HUMAN_MASTER MY_W_FOCUS: Meister nah
+	n += XRFIX_KiBlock(nb, 4, 10, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_MASTER MY_G_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 4, 11, XRFIX_KiZuege(1, 19, 0, 0, 0, 0), XRFIX_KiZuege(1, 5, 0, 0, 0, 0));   // HUMAN_MASTER MY_G_FOCUS: Mittlere Entfernung
+	n += XRFIX_KiBlock(nb, 4, 15, XRFIX_KiZuege(6, 8, 9, 0, 0, 0), XRFIX_KiZuege(6, 0, 0, 0, 0, 0));   // HUMAN_MASTER MY_FK_FOCUS_FAR: Meister fern
+	n += XRFIX_KiBlock(nb, 4, 17, XRFIX_KiZuege(6, 5, 19, 19, 0, 0), XRFIX_KiZuege(6, 24, 0, 0, 0, 0));   // HUMAN_MASTER MY_FK_FOCUS_MAG: Gegen Magier
+	n += XRFIX_KiBlock(nb, 5, 0, XRFIX_KiZuege(5, 6, 0, 0, 0, 0), XRFIX_KiZuege(5, 3, 0, 0, 0, 0));   // MINECRAWLER ENEMY_PREHIT: Gegenangriff
+	n += XRFIX_KiBlock(nb, 6, 0, XRFIX_KiZuege(6, 0, 0, 0, 0, 0), XRFIX_KiZuege(5, 0, 0, 0, 0, 0));   // DEMON ENEMY_PREHIT: Gegenangriff
+	n += XRFIX_KiBlock(nb, 8, 0, XRFIX_KiZuege(6, 0, 0, 0, 0, 0), XRFIX_KiZuege(17, 0, 0, 0, 0, 0));   // STONEGOLEM ENEMY_PREHIT: Gegenangriff
+	n += XRFIX_KiBlock(nb, 8, 1, XRFIX_KiZuege(19, 0, 0, 0, 0, 0), XRFIX_KiZuege(6, 0, 0, 0, 0, 0));   // STONEGOLEM ENEMY_STORMPREHIT: Golem Sturmangriff
+	n += XRFIX_KiBlock(nb, 8, 6, XRFIX_KiZuege(6, 6, 19, 0, 0, 0), XRFIX_KiZuege(6, 19, 0, 0, 0, 0));   // STONEGOLEM MY_W_FOCUS: Nah angreifen
+	n += XRFIX_KiBlock(nb, 12, 5, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // ORC MY_W_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 12, 6, XRFIX_KiZuege(6, 7, 9, 19, 10, 7), XRFIX_KiZuege(6, 7, 9, 19, 19, 19));   // ORC MY_W_FOCUS: Ork nah
+	n += XRFIX_KiBlock(nb, 12, 9, XRFIX_KiZuege(6, 6, 7, 9, 5, 0), XRFIX_KiZuege(6, 0, 0, 0, 0, 0));   // ORC MY_G_RUNTO: Ork fern
+	n += XRFIX_KiBlock(nb, 12, 10, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // ORC MY_G_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 12, 15, XRFIX_KiZuege(6, 6, 7, 9, 5, 0), XRFIX_KiZuege(6, 0, 0, 0, 0, 0));   // ORC MY_FK_FOCUS_FAR: Ork fern
+	n += XRFIX_KiBlock(nb, 12, 17, XRFIX_KiZuege(6, 5, 5, 24, 24, 24), XRFIX_KiZuege(6, 24, 24, 24, 0, 0));   // ORC MY_FK_FOCUS_MAG: Gegen Magier
+	n += XRFIX_KiBlock(nb, 18, 0, XRFIX_KiZuege(3, 6, 0, 0, 0, 0), XRFIX_KiZuege(3, 0, 19, 0, 0, 0));   // SNAPPER ENEMY_PREHIT: Gegenangriff
+	n += XRFIX_KiBlock(nb, 18, 6, XRFIX_KiZuege(6, 6, 19, 0, 0, 0), XRFIX_KiZuege(6, 19, 0, 0, 0, 0));   // SNAPPER MY_W_FOCUS: Nah angreifen
+	n += XRFIX_KiBlock(nb, 19, 5, XRFIX_KiZuege(4, 0, 0, 0, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // SWAMPSHARK MY_W_STRAFE: Sumpfhai
+	n += XRFIX_KiBlock(nb, 19, 6, XRFIX_KiZuege(6, 6, 19, 0, 0, 0), XRFIX_KiZuege(6, 19, 19, 0, 0, 0));   // SWAMPSHARK MY_W_FOCUS: Nah angreifen
+	n += XRFIX_KiBlock(nb, 19, 9, XRFIX_KiZuege(4, 0, 0, 0, 0, 0), XRFIX_KiZuege(1, 0, 0, 0, 0, 0));   // SWAMPSHARK MY_G_RUNTO: Sumpfhai
+	n += XRFIX_KiBlock(nb, 19, 10, XRFIX_KiZuege(4, 6, 0, 0, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // SWAMPSHARK MY_G_STRAFE: Sumpfhai
+	n += XRFIX_KiBlock(nb, 19, 15, XRFIX_KiZuege(19, 0, 0, 0, 0, 0), XRFIX_KiZuege(6, 0, 0, 0, 0, 0));   // SWAMPSHARK MY_FK_FOCUS_FAR: Sumpfhai
+	n += XRFIX_KiBlock(nb, 19, 17, XRFIX_KiZuege(23, 23, 23, 23, 23, 0), XRFIX_KiZuege(6, 23, 23, 23, 23, 23));   // SWAMPSHARK MY_FK_FOCUS_MAG: Sumpfhai
+	n += XRFIX_KiBlock(nb, 23, 0, XRFIX_KiZuege(6, 6, 0, 0, 0, 0), XRFIX_KiZuege(3, 6, 0, 0, 0, 0));   // ZOMBIE ENEMY_PREHIT: Gegenangriff
+	n += XRFIX_KiBlock(nb, 23, 6, XRFIX_KiZuege(6, 6, 19, 0, 0, 0), XRFIX_KiZuege(6, 19, 0, 0, 0, 0));   // ZOMBIE MY_W_FOCUS: Nah angreifen
+	n += XRFIX_KiBlock(nb, 42, 1, XRFIX_KiZuege(17, 17, 19, 0, 0, 0), XRFIX_KiZuege(17, 5, 0, 0, 0, 0));   // HUMAN_NORMAL ENEMY_STORMPREHIT: Sturmangriff parieren
+	n += XRFIX_KiBlock(nb, 42, 5, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_NORMAL MY_W_STRAFE: Umkreist
+	n += XRFIX_KiBlock(nb, 42, 10, XRFIX_KiZuege(4, 4, 3, 19, 0, 0), XRFIX_KiZuege(0, 0, 0, 0, 0, 0));   // HUMAN_NORMAL MY_G_STRAFE: Umkreist
+	return n;
+};
+// ===== Ende Gegner-KI-Tabellen =====
+
+// Gegner-KI nach der Einstellung umstellen - bei jedem Start und Laden und danach jede Sekunde (XRFIX_KiTakt)
+func void XRFIX_GegnerKi()
+{
+	var int nb; nb = XRFIX_GegnerKiNB();
+	var int n; n = XRFIX_KiTabellen(nb);
+	if (n > 0)
+	{
+		if (nb)
+		{
+			MEM_Info(ConcatStrings("Xeres-Fixes: Gegner-KI New Balance, Lagen umgestellt: ", IntToString(n)));
+		}
+		else
+		{
+			MEM_Info(ConcatStrings("Xeres-Fixes: Gegner-KI Xeres, Lagen umgestellt: ", IntToString(n)));
+		};
+	};
+};
+
+// Steht in Xeres' DAUERFUNC_01 an Stelle des Aufrufs von STR_ToInt in "TimeSwitch = STR_ToInt(...)": Gegner-KI umstellen, dann
+// genau das, was STR_ToInt getan haette
+func int XRFIX_KiTakt(var string wert)
+{
+	XRFIX_GegnerKi();
+	return STR_ToInt(wert);
+};
+
+// Im Original von DAUERFUNC_01 (bzw. DAUERFUNC_01_OLD) Befehl fuer Befehl
+//   CALL STR_ToInt; PUSHVAR TimeSwitch; ASSIGN  ->  CALL XRFIX_KiTakt; PUSHVAR TimeSwitch; ASSIGN
+// Aufrufziele zaehlen nach den Spruengen, mit denen das Union-Toolkit Funktionen ersetzt (XRFIX_Aufloesen): Mit dem Toolkit zeigt
+// STR_ToInt auf neuen Code, der Aufruf in DAUERFUNC_01 aber weiter auf den alten Anfang, und dort steht ein Sprung dorthin (im Spiel
+// nachgemessen 13.11.2026). Anzahl der Stellen zurueck; ein zweiter Lauf findet nichts mehr
+func int XRFIX_KiTaktEinbauen(var string name, var int laenge)
+{
+	var int start; start = XRFIX_Inhalt(ConcatStrings(name, "_OLD"));
+	if (start < 0) { start = XRFIX_Inhalt(name); };
+	if (start < 0) { return 0; };
+	var int z1; z1 = XRFIX_Aufloesen(XRFIX_Inhalt("STR_TOINT"));
+	var int z2; z2 = XRFIX_Aufloesen(XRFIX_Inhalt("STR_TOINT_OLD"));
+	var int schalter; schalter = MEM_FindParserSymbol("TIMESWITCH");
+	var int aufruf; aufruf = XRFIX_Inhalt("XRFIX_KITAKT");
+	if ((z1 < 0) || (schalter < 0) || (aufruf < 0)) { return 0; };
+	var int adr; adr = MEM_Parser.stack_stack + start;
+	var int n; n = 0;
+	var int q; q = 0;
+	var int op;
+	var int p;
+	var int ziel;
+	var int schleife; schleife = MEM_StackPos.position;
+	if (q < laenge - 10)
+	{
+		p = adr + q;
+		op = MEM_ReadByte(p);
+		if (op == XRFIX_CALL)
+		{
+			ziel = XRFIX_Aufloesen(MEM_ReadInt(p + 1));
+			if ((ziel == z1) || ((ziel == z2) && (z2 >= 0)))
+			{
+				if ((MEM_ReadByte(p + 5) == XRFIX_PUSHVAR) && (MEM_ReadInt(p + 6) == schalter) && (MEM_ReadByte(p + 10) == XRFIX_ASSIGN))
+				{
+					MEM_WriteInt(p + 1, aufruf);
+					n += 1;
+				};
+			};
+		};
+		q += XRFIX_BefehlLaenge(op);
+		MEM_StackPos.position = schleife;
+	};
+	return n;
+};
+
+// 4. Umschalter in DAUERFUNC_01 einbauen (Laenge = Groesse der Funktion im Skript) und gleich umstellen
+func void XRFIX_GegnerKiStart()
+{
+	if (XRFIX_KiTaktEinbauen("DAUERFUNC_01", 13786) > 0)
+	{
+		MEM_Info("Xeres-Fixes: Gegner-KI folgt der Einstellung jede Sekunde (DAUERFUNC_01)");
+	};
+	XRFIX_GegnerKi();
+};
+
 // Die Engine ruft Init_Global bei jedem Spielstart und jedem Laden auf - danach ist Ikarus bereit (LeGo_Init)
 func void Init_Global()
 {
@@ -626,4 +867,5 @@ func void Init_Global()
 	XRFIX_Blut();
 	XRFIX_Nebengilden();
 	XRFIX_Dialoge();
+	XRFIX_GegnerKiStart();
 };
