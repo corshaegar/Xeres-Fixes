@@ -69,8 +69,8 @@ skip them, but that has not been tested yet.
 - **The earlier teleport fix** (`XeresNeu_Teleportfix.vdf`) fixed the world changes and the pass only. You can keep it or
   remove it – both work together.
 - **[Gothic-I-II-Universal-Coop](https://github.com/corshaegar/Gothic-I-II-Universal-Coop)** contains both bug fixes for every
-  mod from its next release on (after 0.10.3). With the coop installed you don't need this file for them, but it does no harm
-  either. The side-guild option is only in this package; in co-op, both players should install it.
+  mod since 0.11.0. With the coop installed you don't need this file for them, but it does no harm either. The side-guild
+  option is only in this package; in co-op, both players should install it.
 
 ## How it works
 
@@ -244,8 +244,8 @@ sollte Gothic sie einfach übergehen, ausprobiert ist das aber noch nicht.
 - **Der frühere Teleport-Fix** (`XeresNeu_Teleportfix.vdf`) hat nur die Weltwechsel und den Pass behoben. Er kann bleiben
   oder weg – beide vertragen sich.
 - **[Gothic-I-II-Universal-Coop](https://github.com/corshaegar/Gothic-I-II-Universal-Coop)** enthält beide Fehlerbehebungen für
-  jede Mod ab seiner nächsten Veröffentlichung (nach 0.10.3). Mit dem Coop braucht man diese Datei dafür nicht, sie schadet aber
-  auch nicht. Die Nebengilden-Einstellung gibt es nur in diesem Paket; im Coop sollten beide Spieler es installieren.
+  jede Mod seit 0.11.0. Mit dem Coop braucht man diese Datei dafür nicht, sie schadet aber auch nicht. Die
+  Nebengilden-Einstellung gibt es nur in diesem Paket; im Coop sollten beide Spieler es installieren.
 
 ## Wie es funktioniert
 
