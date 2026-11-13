@@ -2,6 +2,25 @@
 
 > *Deutsche Fassung: [CHANGELOG.de.md](CHANGELOG.de.md).*
 
+## 1.4.0 – Enemy AI like New Balance (option)
+
+- **New option: Optionen → Speziell → Gegner-KI** – "Xeres (Original)" or "New Balance". It starts at Xeres, so nothing changes
+  unless you switch it. A change applies within a second, also in a running game and in the middle of a fight. Stored in
+  `Gothic.ini` under `[XERES_FIXES]` as `gegnerki`.
+- "New Balance" is a way of fighting modelled on *Die Rückkehr 2.0 – New Balance*; 39 situations in 11 fighting styles change.
+  Humans parry storm attacks, react when you circle them and wait at medium distance; masters use their combos; orcs wait less
+  and attack in more varied ways; masters and orcs dodge sideways against a mage at a distance; minecrawlers, demons, stone
+  golems, snappers and zombies hit back more often; swamp sharks no longer rush at you.
+- The new moves come from this package's own rules applied to Xeres' fight tables – close to New Balance, but not the same, and
+  without any of its files or data. What else New Balance changes about fighting, with its plugin and scripts, is not part of it.
+- The options page "Speziell" lists the new line first and keeps all entries in screen order, so the arrow keys move from top to
+  bottom.
+- Checked against the real script of the mod (`Test\gegnerki_test.py`: the table matches the rules, switching changes exactly 39
+  situations and restores them byte for byte, the switch in `DauerFunc_01` works with the Union Toolkit too; `Test\skript_test.py`:
+  the new menu order) and in the running game on two instances: all 39 situations switched and the rest unchanged, a change of
+  the option took effect after one to two and a half seconds in both directions, and the co-op mod's world test ran as before.
+  Not tried yet: the menu on screen and how the fights feel.
+
 ## 1.3.0 – More than four side guilds (option)
 
 - **New option: Optionen → Speziell → Nebengilden** – "4 (Original)", 5, 6, 7, 8 or "unbegrenzt" (no limit). It starts at 4,

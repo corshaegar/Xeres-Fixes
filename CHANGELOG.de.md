@@ -2,6 +2,26 @@
 
 > *English version: [CHANGELOG.md](CHANGELOG.md).*
 
+## 1.4.0 – Gegner-KI wie in New Balance (Einstellung)
+
+- **Neue Einstellung: Optionen → Speziell → Gegner-KI** – „Xeres (Original)“ oder „New Balance“. Vorgabe ist Xeres, es ändert
+  sich also nichts, solange man nicht umschaltet. Eine Änderung gilt nach spätestens einer Sekunde, auch im laufenden Spiel und
+  mitten im Kampf. Gespeichert in der `Gothic.ini` unter `[XERES_FIXES]` als `gegnerki`.
+- „New Balance“ ist eine Kampfweise nach dem Vorbild von *Die Rückkehr 2.0 – New Balance*; 39 Situationen in 11 Kampfstilen
+  ändern sich. Menschen parieren Sturmangriffe, reagieren, wenn man sie umkreist, und warten auf mittlere Entfernung ab; Meister
+  setzen ihre Kombinationen ein; Orks warten seltener und greifen abwechslungsreicher an; gegen Magier auf Distanz weichen Meister
+  und Orks seitlich aus; Minecrawler, Dämonen, Steingolems, Snapper und Zombies schlagen öfter zurück; Sumpfhaie stürmen nicht
+  mehr auf einen los.
+- Die neuen Züge leiten eigene Regeln dieses Pakets aus Xeres' Kampftabellen ab – nah an New Balance, aber nicht dasselbe, und
+  ohne Dateien oder Daten daraus. Was New Balance sonst mit Plugin und eigenen Skripten am Kampf ändert, gehört nicht dazu.
+- Die Seite „Speziell“ führt die neue Zeile als erste und alle Einträge in der Reihenfolge, in der sie auf dem Bildschirm stehen,
+  sodass die Pfeiltasten von oben nach unten laufen.
+- Am echten Skript der Mod geprüft (`Test\gegnerki_test.py`: Die Tabelle passt zu den Regeln, das Umschalten ändert genau 39
+  Situationen und stellt sie Byte für Byte wieder her, der Umschalter in `DauerFunc_01` klappt auch mit dem Union-Toolkit;
+  `Test\skript_test.py`: die neue Reihenfolge im Menü) und im laufenden Spiel mit zwei Instanzen: alle 39 Situationen
+  umgestellt, der Rest unverändert, eine Änderung der Einstellung griff nach ein bis zweieinhalb Sekunden in beide Richtungen,
+  und der Weltentest des Coops lief wie vorher. Noch nicht ausprobiert: das Menü am Bildschirm und wie sich die Kämpfe anfühlen.
+
 ## 1.3.0 – Mehr als vier Nebengilden (Einstellung)
 
 - **Neue Einstellung: Optionen → Speziell → Nebengilden** – „4 (Original)“, 5, 6, 7, 8 oder „unbegrenzt“. Vorgabe ist 4, es

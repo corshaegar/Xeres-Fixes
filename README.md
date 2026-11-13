@@ -1,13 +1,14 @@
 # Xeres-Fixes
 
-**Bug fixes for the Gothic 2 mod *Xeres' Rückkehr* (Clockwork Origins, version 1.0.9) – and an option to join more than four
-side guilds.** One small file for your `Data` folder. It does not modify any of the mod's files.
+**Bug fixes for the Gothic 2 mod *Xeres' Rückkehr* (Clockwork Origins, version 1.0.9) – and two options: more than four side
+guilds, and enemies that fight the way they do in *New Balance*.** One small file for your `Data` folder. It does not modify any
+of the mod's files.
 
 > *Deutsche Fassung: [weiter unten auf dieser Seite](#deutsch).*
 
-**Contents:** [What it fixes](#what-it-fixes) · [More side guilds](#more-than-four-side-guilds) · [Installation](#installation) ·
-[How it works](#how-it-works) · [Test status](#test-status) · [Building](#building-it-yourself) ·
-[Origin and license](#origin-and-license)
+**Contents:** [What it fixes](#what-it-fixes) · [More side guilds](#more-than-four-side-guilds) ·
+[Enemy AI](#enemy-ai-like-new-balance) · [Installation](#installation) · [How it works](#how-it-works) ·
+[Test status](#test-status) · [Building](#building-it-yourself) · [Origin and license](#origin-and-license)
 
 ## What it fixes
 
@@ -57,26 +58,57 @@ with five or more; the fix makes them check for four or more. Up to four guilds,
 The menu stores the option in `Gothic.ini`, section `[XERES_FIXES]`, as `nebengilden` (0 = 4 as in the original, 1 = 5 …
 4 = 8, 5 = no limit). If you edit it there, do it while the game is closed – Gothic rewrites the file when it quits.
 
+## Enemy AI like New Balance
+
+What an opponent does in close combat – attack, side attack, combo, parry, jump back, circle, wait – comes from Gothic's fight
+tables: for each fighting style (coward, normal, strong or master fighter, orc, snapper, golem …) and each of 19 situations ("the
+enemy winds up for a blow", "the enemy is within reach and in sight" …), a list of up to six moves from which the game picks one
+at random. From 1.4.0 on, **Optionen → Speziell → Gegner-KI** switches these tables between "Xeres (Original)" and "New Balance",
+a way of fighting modelled on the mod *Die Rückkehr 2.0 – New Balance*. It starts at "Xeres (Original)" – as long as you leave
+it there, everyone fights as before. A change applies within a second, also in a running game and in the middle of a fight.
+
+With "New Balance", 39 situations in 11 fighting styles change:
+
+- **Humans** parry storm attacks instead of stepping aside; cowards sometimes jump back instead. When you circle them, they turn
+  to face you, back off or wait – Xeres' tables have no move for this (the same goes for orcs). At medium distance, cowards,
+  strong fighters and masters wait instead of stepping sideways.
+- **Masters** use their combos within reach – triple attack, whirl and master attack – and from further away they also open with
+  front and triple attacks.
+- **Orcs** wait less within reach and use whirl and side attacks instead. From further away they attack in more varied ways:
+  mostly straight on, sometimes from the side or with a triple attack, and now and then they step aside.
+- Against a **mage** at a distance, masters and orcs dodge sideways instead of just waiting.
+- **Minecrawlers, demons, stone golems, snappers and zombies** hit back more often when you wind up for a blow – demons, stone
+  golems and zombies every time. Stone golems, snappers and zombies attack twice as often as they wait when you are within reach,
+  and stone golems let a storm attack come instead of striking into it.
+- **Swamp sharks** no longer rush at you: they turn towards you and do not attack from a distance; within reach, they attack
+  twice as often as they wait.
+
+The new moves are not taken from New Balance: this package's own rules derive them from Xeres' tables, so the result comes close
+to New Balance without being the same. What New Balance changes about fighting beyond that, with its own plugin and scripts, is
+not part of it. The menu stores the option in `Gothic.ini`, section `[XERES_FIXES]`, as `gegnerki` (0 = Xeres, 1 = New Balance).
+
 ## Installation
 
 1. Copy `Xeres_Fixes.vdf` into the `Data` folder of the Gothic 2 installation that contains Xeres' Rückkehr.
 2. Start Xeres' Rückkehr as usual.
 
 Requires Xeres' Rückkehr 1.0.9 with Union and zParserExtender – both are part of the usual installation. To remove it, delete
-`Xeres_Fixes.vdf` again. Saves made with 1.3.0 also list its four extra conversations; without the file, Gothic should simply
-skip them, but that has not been tested yet.
+`Xeres_Fixes.vdf` again. Saves made with 1.3.0 or later also list its four extra conversations; without the file, Gothic should
+simply skip them, but that has not been tested yet. The enemy AI leaves nothing in your saves.
 
 - **The earlier teleport fix** (`XeresNeu_Teleportfix.vdf`) fixed the world changes and the pass only. You can keep it or
   remove it – both work together.
 - **[Gothic-I-II-Universal-Coop](https://github.com/corshaegar/Gothic-I-II-Universal-Coop)** contains both bug fixes for every
-  mod since 0.11.0. With the coop installed you don't need this file for them, but it does no harm either. The side-guild
-  option is only in this package; in co-op, both players should install it.
+  mod since 0.11.0. With the coop installed you don't need this file for them, but it does no harm either. The two options are
+  only in this package; in co-op, both players should install it and choose the same settings.
 
 ## How it works
 
-Everything is in two Union scripts for zParserExtender inside the VDF: `System\Autorun\XERES_FIXES.D` and, for the menu line,
-`XERES_FIXES_MENU.D`. The fixes run each time you start a new game or load a save and change only the loaded script code, never
-a file.
+Everything is in two Union scripts for zParserExtender inside the VDF: `System\Autorun\XERES_FIXES.D` and, for the menu lines,
+`XERES_FIXES_MENU.D`. The fixes run each time you start a new game or load a save and change only the loaded script code and
+what Gothic has loaded into memory, never a file. The menu script adds two lines to Xeres' own options page "Speziell" –
+"Gegner-KI" at the top, "Nebengilden" below Free Aim – and keeps all of Xeres' entries; it lists them in the order they appear
+on screen, so the arrow keys move from top to bottom.
 
 **Pointer checks:** the fix changes exactly these comparisons in the loaded script code from `> 0` to `!= 0` – one byte per place
 (Daedalus opcode 8 becomes 17). Nothing else changes: 0 still means "not found", and every valid object counts, including those
@@ -109,11 +141,22 @@ eigene Blutspritzer-Funktion` ("blood splatter loop fixed – the damage functio
 replaces the fixed limit with a call that reads the option every time – in the loaded script code, the instruction
 `PUSHVAR MaxNebengilden` becomes `CALL XRFIX_MaxNebengilden`, both 5 bytes. The two "exactly four" checks become "four or more".
 That makes 25 places in 24 functions; zSpy shows `Xeres-Fixes: Nebengilden-Grenze einstellbar, Stellen umgestellt: 25`. The
-menu script adds one line to Xeres' own options page "Speziell", below Free Aim; all of Xeres' entries stay. The four second
-chances are conversations of their own that call the mod's original dialogue functions, so you hear the original voices. A new
+four second chances are conversations of their own that call the mod's original dialogue functions, so you hear the original voices. A new
 game lists them right away. When you load a save from before 1.3.0, though, Gothic takes its list of conversations from the save,
 and the four are missing – so the fix adds them right after loading, the same way Gothic itself sets up a conversation, and from
 your next save on they are part of it (zSpy: `Xeres-Fixes: zweite Gelegenheiten in die Dialogliste nachgetragen: 4`).
+
+**Enemy AI:** Gothic reads the fight tables (`FIGHT.DAT`) once at start into a fixed list – 50 fighting styles with 19 situations
+each, every one with six moves and the number of moves that count. The fix writes the moves of the chosen version straight into
+that list, and into a situation only if it holds exactly the moves of the other version; whatever another script or plugin
+changed there stays as it is. It switches at every start and load and after that once a second: Xeres' own `DauerFunc_01` reads the mod's
+option "Spielzeit" every second, and that call of `STR_ToInt` now goes to `XRFIX_KiTakt`, which applies the enemy AI option and
+then returns exactly what `STR_ToInt` would (both calls are 5 bytes). If the Union Toolkit has replaced `STR_ToInt` with a jump
+to its own version, the fix follows that jump. zSpy shows `Xeres-Fixes: Gegner-KI folgt der Einstellung jede Sekunde
+(DAUERFUNC_01)` ("the enemy AI follows the option every second") once per start, and `Xeres-Fixes: Gegner-KI New Balance, Lagen
+umgestellt: 39` ("situations switched: 39") whenever it switches. The table itself comes from `Werkzeuge\gegnerki_regeln.py`: it
+reads Xeres' `FIGHT.DAT`, applies one rule for each behaviour described above and writes the result into `XERES_FIXES.D`, each
+line with Xeres' moves next to the new ones.
 
 ## Test status
 
@@ -141,8 +184,8 @@ damage (5 to 30 points), and the blood splatter showed exactly that damage – o
 `Test\nebengilden_test.py` replays the side-guild change on the real script: 25 places in 24 functions (22 calls, 3
 comparisons), every place in the whole script covered, no other byte touched, a second run finds nothing, and with the option at
 4 every place decides like the original for 0 to 4 guilds. `Test\skript_test.py` checks both script files against the mod's
-compiled scripts – structure, names, fields, number of arguments, and that the menu line fits into Xeres' page – because
-zParserExtender only compiles them when the game starts. All four tests pass with Xeres' Rückkehr 1.0.9.
+compiled scripts – structure, names, fields, number of arguments, and that the menu lines fit into Xeres' page – because
+zParserExtender only compiles them when the game starts.
 
 **Checked in the running game** on 13 November 2026 (Xeres' Rückkehr 1.0.9 with Union, GD3D11 and several Union plugins),
 loading a save made with 1.2.0, on two game instances: both scripts are compiled, all 25 places are changed and the 20 pointer
@@ -153,32 +196,51 @@ closed at four guilds; at 5 it was open at four and closed at five; at "unbegren
 counted as 4 – exactly as intended. The co-op mod's world test ran as before with the package. **Not tried yet:** using the menu
 line on screen and actually talking to the four people for a second chance.
 
+`Test\gegnerki_test.py` checks the enemy AI without starting the game: the table in the script is exactly what the rules make of
+Xeres' `FIGHT.DAT`, and its Xeres moves are the mod's. Replayed on a copy of Gothic's list, switching to "New Balance" changes
+exactly 39 situations and a second run none, switching back restores the list byte for byte, and no situation is ever left
+without a move. In `DauerFunc_01` only the target of that one call changes – also with the Union Toolkit's jump rebuilt – and a
+second run finds nothing. `Test\skript_test.py` also checks the new order of the options page. All five tests pass with Xeres'
+Rückkehr 1.0.9.
+
+**Checked in the running game** on 13 November 2026 (Xeres' Rückkehr 1.0.9 with Union, GD3D11 and several Union plugins,
+including the Union Toolkit), on two game instances with the option set to "New Balance": the switch sat in `DauerFunc_01`, all
+39 situations held the new moves and the other 911 those from Xeres' `FIGHT.DAT`, and the page "Speziell" lists "Gegner-KI"
+first. Then the option was changed in the running game the way the menu stores it: Gothic's list followed after one to two and a
+half seconds, to Xeres and back. The co-op mod's world test ran as before, without crashes. **Not tried yet:** using the menu
+line on screen and watching how the fights feel.
+
 ## Building it yourself
 
 ```
 powershell -ExecutionPolicy Bypass -File Werkzeuge\bauen.ps1 -Test -Spiel "<Xeres' Rückkehr folder>"
 ```
 
-builds `Bau\Xeres_Fixes.vdf` from `Quelltext\` after running the four tests (Python 3). The folder names are German: `Quelltext`
-= source, `Werkzeuge` = tools, `Bau` = build output.
+builds `Bau\Xeres_Fixes.vdf` from `Quelltext\` after running the five tests (Python 3).
+`python Werkzeuge\gegnerki_regeln.py --xeres "<Xeres' Rückkehr folder>"` shows what the enemy AI rules change; with `--schreiben`
+("write") it renews the table in `XERES_FIXES.D`. The folder names are German: `Quelltext` = source, `Werkzeuge` = tools,
+`Bau` = build output.
 
 ## Origin and license
 
 The world-change bug was tracked down on 17 October 2026 (the earlier teleport fix); the VDF writer in `Werkzeuge\bauen.ps1`
 comes from that fix. This package extends it to every place with the same cause. The blood splatter crash was reported by
-a player on 10 November 2026; the side-guild option was added on 13 November 2026. Licensed under the GNU Affero General Public
-License 3.0 ([`LICENSE`](LICENSE)). *Xeres' Rückkehr* belongs to Clockwork Origins, Gothic to its rights holders. No warranty.
+a player on 10 November 2026; the side-guild option and the enemy AI option were added on 13 November 2026. The enemy AI is
+modelled on *Die Rückkehr 2.0 – New Balance* – thanks to its authors for the example; this package contains none of its files
+or data. Licensed under the GNU Affero General Public License 3.0 ([`LICENSE`](LICENSE)). *Xeres' Rückkehr* belongs to Clockwork
+Origins, *New Balance* to its authors, Gothic to its rights holders. No warranty.
 
 ---
 
 # Deutsch
 
-**Fehlerbehebungen für die Gothic-2-Mod *Xeres' Rückkehr* (Clockwork Origins, Version 1.0.9) – und eine Einstellung für mehr
-als vier Nebengilden.** Eine kleine Datei für den Ordner `Data`. Sie verändert keine Datei der Mod.
+**Fehlerbehebungen für die Gothic-2-Mod *Xeres' Rückkehr* (Clockwork Origins, Version 1.0.9) – und zwei Einstellungen: mehr
+als vier Nebengilden und Gegner, die wie in *New Balance* kämpfen.** Eine kleine Datei für den Ordner `Data`. Sie verändert keine
+Datei der Mod.
 
 **Inhalt:** [Was behoben wird](#was-behoben-wird) · [Mehr Nebengilden](#mehr-als-vier-nebengilden) ·
-[Installation](#installation-1) · [Wie es funktioniert](#wie-es-funktioniert) · [Teststand](#teststand) ·
-[Selbst bauen](#selbst-bauen) · [Herkunft und Lizenz](#herkunft-und-lizenz)
+[Gegner-KI](#gegner-ki-wie-in-new-balance) · [Installation](#installation-1) · [Wie es funktioniert](#wie-es-funktioniert) ·
+[Teststand](#teststand) · [Selbst bauen](#selbst-bauen) · [Herkunft und Lizenz](#herkunft-und-lizenz)
 
 ## Was behoben wird
 
@@ -232,26 +294,60 @@ Das Menü speichert die Einstellung in der `Gothic.ini`, Abschnitt `[XERES_FIXES
 1 = 5 … 4 = 8, 5 = unbegrenzt). Wer sie dort ändert, sollte das bei geschlossenem Spiel tun – Gothic schreibt die Datei beim
 Beenden neu.
 
+## Gegner-KI wie in New Balance
+
+Was ein Gegner im Nahkampf tut – zuschlagen, von der Seite angreifen, eine Kombination schlagen, parieren, zurückspringen,
+umkreisen, abwarten –, steht in Gothics Kampftabellen: für jeden Kampfstil (feiger, normaler, starker oder Meister-Kämpfer, Ork,
+Snapper, Golem …) und jede von 19 Situationen („der Gegner holt zum Schlag aus“, „der Gegner ist in Reichweite und im Blick“ …)
+eine Liste von bis zu sechs Zügen, aus der das Spiel zufällig einen wählt. Ab 1.4.0 schaltet **Optionen → Speziell → Gegner-KI**
+diese Tabellen zwischen „Xeres (Original)“ und „New Balance“ um, einer Kampfweise nach dem Vorbild der Mod *Die Rückkehr 2.0 –
+New Balance*. Vorgabe ist „Xeres (Original)“ – solange es dabei bleibt, kämpfen alle wie bisher. Eine Änderung gilt nach
+spätestens einer Sekunde, auch im laufenden Spiel und mitten im Kampf.
+
+Mit „New Balance“ ändern sich 39 Situationen in 11 Kampfstilen:
+
+- **Menschen** parieren Sturmangriffe, statt seitwärts auszuweichen; Feiglinge springen stattdessen auch mal zurück. Umkreist
+  man sie, drehen sie sich zu einem, weichen zurück oder warten ab – dafür haben Xeres' Tabellen keinen Zug (bei Orks ebenso).
+  Auf mittlere Entfernung warten Feiglinge, starke Kämpfer und Meister ab, statt einen Seitschritt zu machen.
+- **Meister** setzen in Reichweite ihre Kombinationen ein – Dreifach-, Wirbel- und Meisterangriff – und greifen aus größerer
+  Entfernung auch mit Front- und Dreifachangriff an.
+- **Orks** warten in Reichweite seltener und schlagen dafür Wirbel- und Seitenangriffe. Aus größerer Entfernung greifen sie
+  abwechslungsreicher an: meist direkt, manchmal von der Seite oder mit einem Dreifachangriff, und ab und zu weichen sie seitlich
+  aus.
+- Gegen **Magier** auf Distanz weichen Meister und Orks seitlich aus, statt nur abzuwarten.
+- **Minecrawler, Dämonen, Steingolems, Snapper und Zombies** schlagen öfter zurück, wenn man zum Schlag ausholt – Dämonen,
+  Steingolems und Zombies jedes Mal. Steingolems, Snapper und Zombies greifen in Reichweite doppelt so oft an, wie sie abwarten,
+  und einen Sturmangriff lassen Steingolems auf sich zukommen, statt hineinzuschlagen.
+- **Sumpfhaie** stürmen nicht mehr auf einen los: Sie drehen sich zu einem und greifen aus der Ferne nicht an; in Reichweite
+  greifen sie doppelt so oft an, wie sie abwarten.
+
+Die neuen Züge stammen nicht aus New Balance: Eigene Regeln dieses Pakets leiten sie aus Xeres' Tabellen ab. Das Ergebnis kommt
+New Balance nahe, ist aber nicht dasselbe. Was New Balance darüber hinaus mit eigenem Plugin und eigenen Skripten am Kampf ändert,
+gehört nicht dazu. Das Menü speichert die Einstellung in der `Gothic.ini`, Abschnitt `[XERES_FIXES]`, als `gegnerki` (0 = Xeres,
+1 = New Balance).
+
 ## Installation
 
 1. `Xeres_Fixes.vdf` in den Ordner `Data` der Gothic-2-Installation kopieren, in der Xeres' Rückkehr liegt.
 2. Xeres' Rückkehr wie gewohnt starten.
 
 Voraussetzung ist Xeres' Rückkehr 1.0.9 mit Union und zParserExtender; beides gehört zur üblichen Installation. Zum
-Entfernen `Xeres_Fixes.vdf` wieder löschen. Spielstände aus 1.3.0 führen auch die vier zusätzlichen Gespräche; ohne die Datei
-sollte Gothic sie einfach übergehen, ausprobiert ist das aber noch nicht.
+Entfernen `Xeres_Fixes.vdf` wieder löschen. Spielstände ab 1.3.0 führen auch die vier zusätzlichen Gespräche; ohne die Datei
+sollte Gothic sie einfach übergehen, ausprobiert ist das aber noch nicht. Die Gegner-KI hinterlässt nichts in den Spielständen.
 
 - **Der frühere Teleport-Fix** (`XeresNeu_Teleportfix.vdf`) hat nur die Weltwechsel und den Pass behoben. Er kann bleiben
   oder weg – beide vertragen sich.
 - **[Gothic-I-II-Universal-Coop](https://github.com/corshaegar/Gothic-I-II-Universal-Coop)** enthält beide Fehlerbehebungen für
-  jede Mod seit 0.11.0. Mit dem Coop braucht man diese Datei dafür nicht, sie schadet aber auch nicht. Die
-  Nebengilden-Einstellung gibt es nur in diesem Paket; im Coop sollten beide Spieler es installieren.
+  jede Mod seit 0.11.0. Mit dem Coop braucht man diese Datei dafür nicht, sie schadet aber auch nicht. Die beiden
+  Einstellungen gibt es nur in diesem Paket; im Coop sollten beide Spieler es installieren und dasselbe einstellen.
 
 ## Wie es funktioniert
 
-Alles steckt in zwei Union-Skripten für zParserExtender im VDF: `System\Autorun\XERES_FIXES.D` und, für die Menüzeile,
-`XERES_FIXES_MENU.D`. Die Fixes laufen bei jedem neuen Spiel und jedem Laden und ändern nur den geladenen Skriptcode, nie eine
-Datei.
+Alles steckt in zwei Union-Skripten für zParserExtender im VDF: `System\Autorun\XERES_FIXES.D` und, für die Menüzeilen,
+`XERES_FIXES_MENU.D`. Die Fixes laufen bei jedem neuen Spiel und jedem Laden und ändern nur den geladenen Skriptcode und was
+Gothic in den Speicher geladen hat, nie eine Datei. Das Menü-Skript fügt Xeres' eigener Seite „Speziell“ zwei Zeilen hinzu –
+„Gegner-KI“ ganz oben, „Nebengilden“ unter Free Aim – und behält alle Einträge von Xeres; es führt sie in der Reihenfolge, in der
+sie auf dem Bildschirm stehen, damit die Pfeiltasten von oben nach unten laufen.
 
 **Zeiger-Prüfungen:** Der Fix stellt im geladenen Skriptcode genau diese Vergleiche von `> 0` auf `!= 0` um – ein Byte je Stelle (aus
 Daedalus-Opcode 8 wird 17). Sonst ändert sich nichts: 0 heißt weiterhin „nicht gefunden“, und jedes gültige Objekt zählt,
@@ -284,12 +380,23 @@ behoben - B_AssessDamage_Hero ruft wieder Xeres' eigene Blutspritzer-Funktion`.
 ersetzt der Fix die feste Grenze durch einen Aufruf, der die Einstellung jedes Mal neu liest – im geladenen Skriptcode wird aus
 dem Befehl `PUSHVAR MaxNebengilden` ein `CALL XRFIX_MaxNebengilden`, beide 5 Bytes. Aus den beiden Prüfungen auf „genau vier“
 wird „mindestens vier“. Das sind 25 Stellen in 24 Funktionen; im Log von zSpy steht `Xeres-Fixes: Nebengilden-Grenze
-einstellbar, Stellen umgestellt: 25`. Das Menü-Skript fügt Xeres' eigener Seite „Speziell“ eine Zeile unter Free Aim hinzu;
-alle Einträge von Xeres bleiben. Die vier zweiten Gelegenheiten sind eigene Gespräche, die die Original-Dialoge der Mod aufrufen –
+einstellbar, Stellen umgestellt: 25`. Die vier zweiten Gelegenheiten sind eigene Gespräche, die die Original-Dialoge der Mod aufrufen –
 man hört also die Original-Stimmen. Ein neues Spiel führt sie sofort. Lädt man dagegen einen Spielstand von vor 1.3.0, nimmt
 Gothic die Liste der Gespräche aus dem Spielstand, und die vier fehlen – der Fix trägt sie deshalb gleich nach dem Laden nach, so
 wie Gothic selbst ein Gespräch anlegt; ab dem nächsten Speichern stehen sie im Spielstand (zSpy: `Xeres-Fixes: zweite
 Gelegenheiten in die Dialogliste nachgetragen: 4`).
+
+**Gegner-KI:** Gothic liest die Kampftabellen (`FIGHT.DAT`) einmal beim Start in eine feste Liste ein – 50 Kampfstile mit je 19
+Situationen, jede mit sechs Zügen und der Zahl der gültigen. Der Fix schreibt die Züge der gewählten Fassung direkt in diese
+Liste, und zwar in eine Situation nur, wenn darin genau die Züge der anderen Fassung stehen; was ein anderes Skript oder Plugin
+dort geändert hat, bleibt, wie es ist. Er stellt bei jedem Start und jedem Laden um und danach jede Sekunde: Xeres' eigene
+`DauerFunc_01` liest jede Sekunde die Einstellung „Spielzeit“ der Mod, und dieser Aufruf von `STR_ToInt` geht jetzt an
+`XRFIX_KiTakt`. Das stellt die Gegner-KI nach der Einstellung um und gibt dann genau das zurück, was `STR_ToInt` liefern würde
+(beide Aufrufe 5 Bytes). Hat das Union-Toolkit `STR_ToInt` durch einen Sprung auf seine eigene Fassung ersetzt, folgt der Fix
+diesem Sprung. Im Log von zSpy steht je Start einmal `Xeres-Fixes: Gegner-KI folgt der Einstellung jede Sekunde (DAUERFUNC_01)`
+und bei jedem Umstellen `Xeres-Fixes: Gegner-KI New Balance, Lagen umgestellt: 39`. Die Tabelle selbst erzeugt
+`Werkzeuge\gegnerki_regeln.py`: Es liest Xeres' `FIGHT.DAT`, wendet für jedes oben beschriebene Verhalten eine Regel an und
+schreibt das Ergebnis in `XERES_FIXES.D`, jede Zeile mit Xeres' Zügen neben den neuen.
 
 ## Teststand
 
@@ -317,8 +424,8 @@ Schaden – bei Host und Client.
 `Test\nebengilden_test.py` spielt die Nebengilden-Umstellung am echten Skript nach: 25 Stellen in 24 Funktionen (22 Aufrufe,
 3 Vergleiche), jede Stelle im ganzen Skript erfasst, kein anderes Byte verändert, ein zweiter Lauf findet nichts, und mit der
 Einstellung 4 entscheidet jede Stelle für 0 bis 4 Gilden wie das Original. `Test\skript_test.py` prüft beide Skriptdateien gegen
-die übersetzten Skripte der Mod – Aufbau, Namen, Felder, Zahl der Argumente und ob die Menüzeile in Xeres' Seite passt –, weil
-zParserExtender sie erst beim Spielstart übersetzt. Alle vier Tests bestehen mit Xeres' Rückkehr 1.0.9.
+die übersetzten Skripte der Mod – Aufbau, Namen, Felder, Zahl der Argumente und ob die Menüzeilen in Xeres' Seite passen –,
+weil zParserExtender sie erst beim Spielstart übersetzt.
 
 **Im laufenden Spiel geprüft** am 13. November 2026 (Xeres' Rückkehr 1.0.9 mit Union, GD3D11 und mehreren Union-Plugins), mit
 einem Spielstand aus 1.2.0 und zwei Spielinstanzen: Beide Skripte werden übersetzt, alle 25 Stellen sind umgestellt und die 20
@@ -329,18 +436,35 @@ gefragt: Mit Einstellung 4 blieb sie bei vier Gilden zu; mit 5 war sie bei vier 
 offen; ein ungültiger Wert zählte als 4 – genau wie gewollt. Der Weltentest des Coops lief mit dem Paket wie vorher. **Noch nicht
 ausprobiert:** die Menüzeile am Bildschirm bedienen und mit den vier Personen tatsächlich über eine zweite Gelegenheit sprechen.
 
+`Test\gegnerki_test.py` prüft die Gegner-KI, ohne das Spiel zu starten: Die Tabelle im Skript ist genau das, was die Regeln aus
+Xeres' `FIGHT.DAT` machen, und ihre Xeres-Züge sind die der Mod. An einer Kopie von Gothics Liste nachgespielt, ändert das
+Umschalten auf „New Balance“ genau 39 Situationen und ein zweiter Lauf keine, das Zurückschalten stellt die Liste Byte für Byte
+wieder her, und keine Situation bleibt je ohne Zug. In `DauerFunc_01` ändert sich nur das Ziel dieses einen Aufrufs – auch mit
+nachgebautem Sprung des Union-Toolkits –, und ein zweiter Lauf findet nichts. `Test\skript_test.py` prüft zusätzlich die neue
+Reihenfolge der Seite „Speziell“. Alle fünf Tests bestehen mit Xeres' Rückkehr 1.0.9.
+
+**Im laufenden Spiel geprüft** am 13. November 2026 (Xeres' Rückkehr 1.0.9 mit Union, GD3D11 und mehreren Union-Plugins,
+darunter das Union-Toolkit), mit zwei Spielinstanzen und der Einstellung „New Balance“: Der Umschalter steckte in `DauerFunc_01`,
+alle 39 Situationen hatten die neuen Züge und die übrigen 911 die aus Xeres' `FIGHT.DAT`, und die Seite „Speziell“ führt
+„Gegner-KI“ als ersten Eintrag. Danach wurde die Einstellung im laufenden Spiel so geändert, wie das Menü sie speichert: Gothics
+Liste folgte nach ein bis zweieinhalb Sekunden, auf Xeres und zurück. Der Weltentest des Coops lief wie vorher, ohne Abstürze.
+**Noch nicht ausprobiert:** die Menüzeile am Bildschirm bedienen und zusehen, wie sich die Kämpfe anfühlen.
+
 ## Selbst bauen
 
 ```
 powershell -ExecutionPolicy Bypass -File Werkzeuge\bauen.ps1 -Test -Spiel "<Ordner von Xeres' Rückkehr>"
 ```
 
-baut `Bau\Xeres_Fixes.vdf` aus `Quelltext\`, nachdem die vier Tests gelaufen sind (Python 3).
+baut `Bau\Xeres_Fixes.vdf` aus `Quelltext\`, nachdem die fünf Tests gelaufen sind (Python 3).
+`python Werkzeuge\gegnerki_regeln.py --xeres "<Ordner von Xeres' Rückkehr>"` zeigt, was die Regeln der Gegner-KI ändern; mit
+`--schreiben` erneuert es die Tabelle in `XERES_FIXES.D`.
 
 ## Herkunft und Lizenz
 
 Der Fehler bei den Weltwechseln wurde am 17. Oktober 2026 gefunden (der frühere Teleport-Fix); der VDF-Schreiber in
 `Werkzeuge\bauen.ps1` stammt daraus. Dieses Paket behebt jetzt alle Stellen mit derselben Ursache. Den Blutspritzer-Absturz
-hat am 10. November 2026 ein Spieler gemeldet; die Nebengilden-Einstellung kam am 13. November 2026 dazu. Lizenz: GNU Affero General
-Public License 3.0 ([`LICENSE`](LICENSE)). *Xeres' Rückkehr* gehört Clockwork Origins, Gothic seinen Rechteinhabern. Ohne
-Gewähr.
+hat am 10. November 2026 ein Spieler gemeldet; die Einstellungen für Nebengilden und Gegner-KI kamen am 13. November 2026 dazu.
+Die Gegner-KI folgt dem Vorbild von *Die Rückkehr 2.0 – New Balance* – Dank an dessen Autoren; dieses Paket enthält keine Dateien
+oder Daten daraus. Lizenz: GNU Affero General Public License 3.0 ([`LICENSE`](LICENSE)). *Xeres' Rückkehr* gehört Clockwork
+Origins, *New Balance* seinen Autoren, Gothic seinen Rechteinhabern. Ohne Gewähr.
