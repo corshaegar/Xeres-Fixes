@@ -65,13 +65,14 @@ tables: for each fighting style (coward, normal, strong or master fighter, orc, 
 enemy winds up for a blow", "the enemy is within reach and in sight" …), a list of up to six moves from which the game picks one
 at random. From 1.4.0 on, **Optionen → Speziell → Gegner-KI** switches these tables between "Xeres (Original)" and "New Balance",
 a way of fighting modelled on the mod *Die Rückkehr 2.0 – New Balance*. It starts at "Xeres (Original)" – as long as you leave
-it there, everyone fights as before. A change applies within a second, also in a running game and in the middle of a fight.
+it there, everyone fights as before. A change applies after a second or two, also in a running game and in the middle of a
+fight.
 
 With "New Balance", 39 situations in 11 fighting styles change:
 
-- **Humans** parry storm attacks instead of stepping aside; cowards sometimes jump back instead. When you circle them, they turn
-  to face you, back off or wait – Xeres' tables have no move for this (the same goes for orcs). At medium distance, cowards,
-  strong fighters and masters wait instead of stepping sideways.
+- **Humans** parry storm attacks instead of stepping aside; cowards sometimes jump back. When you circle them, they turn to face
+  you, back off or wait, where Xeres' tables have no move at all; orcs do the same. At medium distance, cowards, strong fighters
+  and masters wait instead of stepping sideways.
 - **Masters** use their combos within reach – triple attack, whirl and master attack – and from further away they also open with
   front and triple attacks.
 - **Orcs** wait less within reach and use whirl and side attacks instead. From further away they attack in more varied ways:
@@ -301,14 +302,14 @@ umkreisen, abwarten –, steht in Gothics Kampftabellen: für jeden Kampfstil (f
 Snapper, Golem …) und jede von 19 Situationen („der Gegner holt zum Schlag aus“, „der Gegner ist in Reichweite und im Blick“ …)
 eine Liste von bis zu sechs Zügen, aus der das Spiel zufällig einen wählt. Ab 1.4.0 schaltet **Optionen → Speziell → Gegner-KI**
 diese Tabellen zwischen „Xeres (Original)“ und „New Balance“ um, einer Kampfweise nach dem Vorbild der Mod *Die Rückkehr 2.0 –
-New Balance*. Vorgabe ist „Xeres (Original)“ – solange es dabei bleibt, kämpfen alle wie bisher. Eine Änderung gilt nach
-spätestens einer Sekunde, auch im laufenden Spiel und mitten im Kampf.
+New Balance*. Vorgabe ist „Xeres (Original)“ – solange es dabei bleibt, kämpfen alle wie bisher. Eine Änderung gilt nach ein,
+zwei Sekunden, auch im laufenden Spiel und mitten im Kampf.
 
 Mit „New Balance“ ändern sich 39 Situationen in 11 Kampfstilen:
 
-- **Menschen** parieren Sturmangriffe, statt seitwärts auszuweichen; Feiglinge springen stattdessen auch mal zurück. Umkreist
-  man sie, drehen sie sich zu einem, weichen zurück oder warten ab – dafür haben Xeres' Tabellen keinen Zug (bei Orks ebenso).
-  Auf mittlere Entfernung warten Feiglinge, starke Kämpfer und Meister ab, statt einen Seitschritt zu machen.
+- **Menschen** parieren Sturmangriffe, statt seitwärts auszuweichen; Feiglinge springen auch mal zurück. Umkreist man sie,
+  drehen sie sich zu einem, weichen zurück oder warten ab, wo Xeres' Tabellen gar keinen Zug vorsehen; Orks ebenso. Auf
+  mittlere Entfernung warten Feiglinge, starke Kämpfer und Meister ab, statt einen Seitschritt zu machen.
 - **Meister** setzen in Reichweite ihre Kombinationen ein – Dreifach-, Wirbel- und Meisterangriff – und greifen aus größerer
   Entfernung auch mit Front- und Dreifachangriff an.
 - **Orks** warten in Reichweite seltener und schlagen dafür Wirbel- und Seitenangriffe. Aus größerer Entfernung greifen sie

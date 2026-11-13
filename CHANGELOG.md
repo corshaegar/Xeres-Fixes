@@ -5,8 +5,8 @@
 ## 1.4.0 – Enemy AI like New Balance (option)
 
 - **New option: Optionen → Speziell → Gegner-KI** – "Xeres (Original)" or "New Balance". It starts at Xeres, so nothing changes
-  unless you switch it. A change applies within a second, also in a running game and in the middle of a fight. Stored in
-  `Gothic.ini` under `[XERES_FIXES]` as `gegnerki`.
+  unless you switch it. A change applies after a second or two, also in a running game and in the middle of a fight. Stored
+  in `Gothic.ini` under `[XERES_FIXES]` as `gegnerki`.
 - "New Balance" is a way of fighting modelled on *Die Rückkehr 2.0 – New Balance*; 39 situations in 11 fighting styles change.
   Humans parry storm attacks, react when you circle them and wait at medium distance; masters use their combos; orcs wait less
   and attack in more varied ways; masters and orcs dodge sideways against a mage at a distance; minecrawlers, demons, stone

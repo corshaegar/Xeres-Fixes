@@ -5,7 +5,7 @@
 ## 1.4.0 – Gegner-KI wie in New Balance (Einstellung)
 
 - **Neue Einstellung: Optionen → Speziell → Gegner-KI** – „Xeres (Original)“ oder „New Balance“. Vorgabe ist Xeres, es ändert
-  sich also nichts, solange man nicht umschaltet. Eine Änderung gilt nach spätestens einer Sekunde, auch im laufenden Spiel und
+  sich also nichts, solange man nicht umschaltet. Eine Änderung gilt nach ein, zwei Sekunden, auch im laufenden Spiel und
   mitten im Kampf. Gespeichert in der `Gothic.ini` unter `[XERES_FIXES]` als `gegnerki`.
 - „New Balance“ ist eine Kampfweise nach dem Vorbild von *Die Rückkehr 2.0 – New Balance*; 39 Situationen in 11 Kampfstilen
   ändern sich. Menschen parieren Sturmangriffe, reagieren, wenn man sie umkreist, und warten auf mittlere Entfernung ab; Meister
