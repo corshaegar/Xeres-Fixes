@@ -183,6 +183,24 @@ class Pruefer:
         self.nimm('op', '}'); self.nimm('op', ';')
         return meta
 
+    def deklariere(self, nm, eintrag):
+        """Name auf Dateiebene festhalten. Daedalus kennt keine Gross-/Kleinschreibung: zweimal derselbe Name ist ein Fehler (mit
+        MergeMode meldet zParserExtender "replacement symbol ... has incorrect type", Test 13.11.2026). Steht der Name schon im
+        Skript der Mod, muss MergeMode an sein und die Art passen (func ersetzt func, instance ersetzt instance)"""
+        if nm in self.glob:
+            self.f(eintrag['zeile'], '%s ist in dieser Datei schon deklariert (Zeile %d) - Daedalus unterscheidet keine Gross-/'
+                                     'Kleinschreibung' % (nm, self.glob[nm]['zeile']))
+        elif nm in self.dat.by:
+            alt = self.dat.by[nm]
+            art = eintrag['art']
+            passt = ((art == 'func' and alt['typ'] == T_FUNC) or (art == 'instance' and alt['typ'] == T_INST) or
+                     (art == 'prototype' and alt['typ'] == T_PROTO))
+            if not self.merge:
+                self.f(eintrag['zeile'], '%s gibt es schon im Skript der Mod (ohne MergeMode nicht erlaubt)' % nm)
+            elif not passt:
+                self.f(eintrag['zeile'], '%s ersetzt ein Symbol anderer Art im Skript der Mod (Typ %d)' % (nm, alt['typ']))
+        self.glob[nm] = eintrag
+
     # Vorlauf: alle Deklarationen der Datei (Vorwaertsbezuege wie in Gothics Dialogen)
     def vorlauf(self):
         p, tiefe, t = self.pos, 0, self.tok
@@ -199,16 +217,17 @@ class Pruefer:
                         if t[q][1].lower() == 'var':
                             ps.append(dict(typ=t[q + 1][1], name=t[q + 2][1]))
                         q += 1
-                    self.glob[nm] = dict(art='func', typ=t[p + 1][1].lower(), params=ps, zeile=t[p][2])
+                    self.deklariere(nm, dict(art='func', typ=t[p + 1][1].lower(), params=ps, zeile=t[p][2]))
+                    p = q   # Parameter ("var int x" im Funktionskopf) sind keine globalen Namen
                 elif w in ('instance', 'prototype'):
                     nm, q = [t[p + 1][1].upper()], p + 2
                     while t[q][1] == ',':
                         nm.append(t[q + 1][1].upper()); q += 2
                     eltern = t[q + 1][1].upper() if t[q][1] == '(' else None
                     for n in nm:
-                        self.glob[n] = dict(art=w, eltern=eltern, zeile=t[p][2])
+                        self.deklariere(n, dict(art=w, eltern=eltern, zeile=t[p][2]))
                 elif w in ('const', 'var'):
-                    self.glob[t[p + 2][1].upper()] = dict(art=w, typ=t[p + 1][1].lower(), zeile=t[p][2])
+                    self.deklariere(t[p + 2][1].upper(), dict(art=w, typ=t[p + 1][1].lower(), zeile=t[p][2]))
             p += 1
         for nm, g in list(self.glob.items()):
             if self.merge and nm in self.dat.by and g['art'] in ('func', 'instance'):

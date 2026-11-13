@@ -280,7 +280,7 @@ func void XRFIX_Blut()
 
 // 3. Nebengilden
 
-const int XRFIX_NEBENGILDEN = 4;   // Grenze im Original
+const int XRFIX_GRENZE_ORIGINAL = 4;   // Grenze im Original (Daedalus kennt keine Gross-/Kleinschreibung: nicht XRFIX_Nebengilden)
 
 // Grenze aus der Gothic.ini, [XERES_FIXES] nebengilden = Nummer der Auswahl im Menue: 0 = 4 (Original) ... 4 = 8, 5 = unbegrenzt.
 // Fehlt der Eintrag oder steht etwas anderes dort, gilt 4. Wird bei jeder Pruefung neu gelesen - eine Aenderung im Menue gilt sofort
@@ -292,7 +292,7 @@ func int XRFIX_MaxNebengilden()
 	if (Hlp_StrCmp(w, "3")) { return 7; };
 	if (Hlp_StrCmp(w, "4")) { return 8; };
 	if (Hlp_StrCmp(w, "5")) { return 99; };
-	return XRFIX_NEBENGILDEN;
+	return XRFIX_GRENZE_ORIGINAL;
 };
 
 // Vergleiche mit der Grenze im Original einer Funktion (bzw. <Name>_OLD) umstellen, Befehl fuer Befehl:
@@ -340,12 +340,12 @@ func int XRFIX_NebengildenFunktion(var string name, var int laenge)
 						else if (vgl == XRFIX_EQ)
 						{
 							MEM_WriteByte(p, XRFIX_PUSHINT);
-							MEM_WriteInt(p + 1, XRFIX_NEBENGILDEN);
+							MEM_WriteInt(p + 1, XRFIX_GRENZE_ORIGINAL);
 							MEM_WriteByte(p + 10, XRFIX_GE);
 							n += 1;
 						};
 					}
-					else if ((op == XRFIX_PUSHINT) && (wert == XRFIX_NEBENGILDEN) && (vgl == XRFIX_EQ))
+					else if ((op == XRFIX_PUSHINT) && (wert == XRFIX_GRENZE_ORIGINAL) && (vgl == XRFIX_EQ))
 					{
 						MEM_WriteByte(p + 10, XRFIX_GE);
 						n += 1;
@@ -397,7 +397,7 @@ func void XRFIX_Nebengilden()
 func int XRFIX_NebengildeFrei()
 {
 	var int grenze; grenze = XRFIX_MaxNebengilden();
-	if ((grenze > XRFIX_NEBENGILDEN) && (Mod_AnzahlNebengilden < grenze)) { return TRUE; };
+	if ((grenze > XRFIX_GRENZE_ORIGINAL) && (Mod_AnzahlNebengilden < grenze)) { return TRUE; };
 	return FALSE;
 };
 
@@ -522,6 +522,102 @@ func void Info_XRFIX_Amir_Nebengilde_Info()
 	Info_Mod_Amir_Lehmar_A();
 };
 
+// Die vier zweiten Gelegenheiten in Gothics Dialogliste nachtragen. Ein neues Spiel baut die Liste aus allen Gespraechen der
+// Skripte; beim Laden aber ersetzt Gothic sie durch die Liste aus dem Spielstand (oCInfoManager::Unarchive) - in einem Spielstand
+// von vor 1.3.0 fehlen die vier dann (im Spiel nachgemessen 13.11.2026, zParserExtender ergaenzt sie nicht). Init_Global laeuft
+// erst danach (oCGame::CallScriptInit). Fehlt eines, legt der Fix es so an wie Gothic selbst (oCInfo-Konstruktor,
+// zCParser::CreateInstance, SetInstance, DoCheck) und haengt es nach nr sortiert ein (wie zCListSort::InsertSort). Beim naechsten
+// Speichern steht es dann im Spielstand. Adressen von Gothic 2 Die Nacht des Raben (Report-Version 2.6).
+
+const int XRFIX_OCINFO_INIT          = 7353264;   // 0x007033B0 oCInfo::oCInfo()
+const int XRFIX_OCINFO_SETINSTANCE   = 7353664;   // 0x00703540 oCInfo::SetInstance(int)
+const int XRFIX_OCINFO_DOCHECK       = 7354096;   // 0x007036F0 oCInfo::DoCheck()
+const int XRFIX_ZCPARSER_CREATEINST  = 7942048;   // 0x00792FA0 zCParser::CreateInstance(int, void*)
+const int XRFIX_OCINFO_GROESSE       = 92;        // sizeof(oCInfo) 0x5C
+const int XRFIX_OCINFO_DATEN         = 28;        // oCInfo.pd (npc, nr, ... wie C_INFO)
+const int XRFIX_OCINFO_NR            = 32;        // oCInfo.pd.nr
+const int XRFIX_OCINFO_INSTANZ       = 80;        // oCInfo.instance (Symbolnummer)
+
+// Welche der vier Gespraeche stehen schon in der Liste? Bit 1, 2, 4, 8 je Gespraech
+func int XRFIX_DialogMaske(var int i1, var int i2, var int i3, var int i4)
+{
+	if (!MEM_Game.infoman) { return 15; };
+	var int maske; maske = 0;
+	var int knoten; knoten = MEM_Game.infoman + 4;   // Kopf der Liste steckt im Manager (Vergleich, Daten, weiter)
+	var int eintrag;
+	var int nummer;
+	var int schleife; schleife = MEM_StackPos.position;
+	if (knoten)
+	{
+		eintrag = MEM_ReadInt(knoten + 4);
+		if (eintrag)
+		{
+			nummer = MEM_ReadInt(eintrag + XRFIX_OCINFO_INSTANZ);
+			if (nummer == i1) { maske = maske | 1; };
+			if (nummer == i2) { maske = maske | 2; };
+			if (nummer == i3) { maske = maske | 4; };
+			if (nummer == i4) { maske = maske | 8; };
+		};
+		knoten = MEM_ReadInt(knoten + 8);
+		MEM_StackPos.position = schleife;
+	};
+	return maske;
+};
+
+// Ein Gespraech anlegen und nach nr sortiert einhaengen; 1 = nachgetragen
+func int XRFIX_DialogNachtragen(var int instanz)
+{
+	if ((instanz <= 0) || (!MEM_Game.infoman)) { return 0; };
+	var int eintrag; eintrag = MEM_Alloc(XRFIX_OCINFO_GROESSE);
+	if (!eintrag) { return 0; };
+	CALL__thiscall(eintrag, XRFIX_OCINFO_INIT);
+	CALL_PtrParam(eintrag + XRFIX_OCINFO_DATEN);
+	CALL_IntParam(instanz);
+	CALL__thiscall(ContentParserAddress, XRFIX_ZCPARSER_CREATEINST);
+	CALL_IntParam(instanz);
+	CALL__thiscall(eintrag, XRFIX_OCINFO_SETINSTANCE);
+	CALL__thiscall(eintrag, XRFIX_OCINFO_DOCHECK);
+	var int kopf; kopf = MEM_Game.infoman + 4;
+	var int ordnung; ordnung = MEM_ReadInt(eintrag + XRFIX_OCINFO_NR);
+	var int vorher; vorher = kopf;
+	var int weiter;
+	var int schleife; schleife = MEM_StackPos.position;
+	weiter = MEM_ReadInt(vorher + 8);
+	if (weiter)
+	{
+		if (MEM_ReadInt(MEM_ReadInt(weiter + 4) + XRFIX_OCINFO_NR) <= ordnung)
+		{
+			vorher = weiter;
+			MEM_StackPos.position = schleife;
+		};
+	};
+	var int neuknoten; neuknoten = MEM_Alloc(12);
+	MEM_WriteInt(neuknoten, MEM_ReadInt(kopf));          // Vergleichsfunktion wie im Kopf (oCInfoManager::CompareInfos)
+	MEM_WriteInt(neuknoten + 4, eintrag);
+	MEM_WriteInt(neuknoten + 8, MEM_ReadInt(vorher + 8));
+	MEM_WriteInt(vorher + 8, neuknoten);
+	return 1;
+};
+
+func void XRFIX_Dialoge()
+{
+	var int i1; i1 = MEM_FindParserSymbol("INFO_XRFIX_NAMIB_NEBENGILDE");
+	var int i2; i2 = MEM_FindParserSymbol("INFO_XRFIX_CASSIA_NEBENGILDE");
+	var int i3; i3 = MEM_FindParserSymbol("INFO_XRFIX_SCATTY_NEBENGILDE");
+	var int i4; i4 = MEM_FindParserSymbol("INFO_XRFIX_AMIR_NEBENGILDE");
+	var int maske; maske = XRFIX_DialogMaske(i1, i2, i3, i4);
+	if (maske == 15) { return; };
+	var int n; n = 0;
+	if (!(maske & 1)) { n += XRFIX_DialogNachtragen(i1); };
+	if (!(maske & 2)) { n += XRFIX_DialogNachtragen(i2); };
+	if (!(maske & 4)) { n += XRFIX_DialogNachtragen(i3); };
+	if (!(maske & 8)) { n += XRFIX_DialogNachtragen(i4); };
+	if (n > 0)
+	{
+		MEM_Info(ConcatStrings("Xeres-Fixes: zweite Gelegenheiten in die Dialogliste nachgetragen: ", IntToString(n)));
+	};
+};
+
 // Die Engine ruft Init_Global bei jedem Spielstart und jedem Laden auf - danach ist Ikarus bereit (LeGo_Init)
 func void Init_Global()
 {
@@ -529,4 +625,5 @@ func void Init_Global()
 	XRFIX_Zeiger();
 	XRFIX_Blut();
 	XRFIX_Nebengilden();
+	XRFIX_Dialoge();
 };

@@ -9,12 +9,13 @@
   joined. Stored in `Gothic.ini` under `[XERES_FIXES]` as `nebengilden`.
 - **Second chances:** the four offers the mod makes only once (Brotherhood in the swamp, thieves, helping the Old Camp, the way
   to the assassins' hideout) come back at the same person if you passed them with your side guilds full – only while the option
-  is above 4.
+  is above 4. In saves from before 1.3.0 the fix adds these conversations when the save is loaded.
 - The Beliar shrine reward and Mario's rise to knight treat four or more side guilds the way they treated exactly four.
 - What rules each other out (bandits or guards, guards or royal guard, militia, paladins) stays as it is.
 - Checked against the real script of the mod (`Test\nebengilden_test.py`: 25 places in 24 functions, with the option at 4 the
-  same as the original; `Test\skript_test.py`: both script files against the mod's compiled scripts). **Not yet tested in the
-  running game.**
+  same as the original; `Test\skript_test.py`: both script files against the mod's compiled scripts) and in the running game
+  with a save from 1.2.0: all places changed, the four conversations added, the menu line there, and Dragomir's join condition
+  following a change of the option at once. Not tried yet: the menu on screen and the second chances in conversation.
 - The tests now also find the mod's scripts directly in `Data` (not only in `Data\ModVDF`).
 
 ## 1.2.0 – Blood splatter back

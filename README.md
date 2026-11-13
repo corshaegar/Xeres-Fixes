@@ -110,7 +110,10 @@ replaces the fixed limit with a call that reads the option every time – in the
 `PUSHVAR MaxNebengilden` becomes `CALL XRFIX_MaxNebengilden`, both 5 bytes. The two "exactly four" checks become "four or more".
 That makes 25 places in 24 functions; zSpy shows `Xeres-Fixes: Nebengilden-Grenze einstellbar, Stellen umgestellt: 25`. The
 menu script adds one line to Xeres' own options page "Speziell", below Free Aim; all of Xeres' entries stay. The four second
-chances are conversations of their own that call the mod's original dialogue functions, so you hear the original voices.
+chances are conversations of their own that call the mod's original dialogue functions, so you hear the original voices. A new
+game lists them right away. When you load a save from before 1.3.0, though, Gothic takes its list of conversations from the save,
+and the four are missing – so the fix adds them right after loading, the same way Gothic itself sets up a conversation, and from
+your next save on they are part of it (zSpy: `Xeres-Fixes: zweite Gelegenheiten in die Dialogliste nachgetragen: 4`).
 
 ## Test status
 
@@ -141,9 +144,14 @@ comparisons), every place in the whole script covered, no other byte touched, a 
 compiled scripts – structure, names, fields, number of arguments, and that the menu line fits into Xeres' page – because
 zParserExtender only compiles them when the game starts. All four tests pass with Xeres' Rückkehr 1.0.9.
 
-**Not yet tested in the running game:** the side-guild option (the menu line, changing it during play, joining a fifth guild)
-and the second chances. In saves started before 1.3.0, the second chances need zParserExtender to add the new conversations when
-the save is loaded – it hooks exactly that step, but this has not been tried yet.
+**Checked in the running game** on 13 November 2026 (Xeres' Rückkehr 1.0.9 with Union, GD3D11 and several Union plugins),
+loading a save made with 1.2.0, on two game instances: both scripts are compiled, all 25 places are changed and the 20 pointer
+checks still are, the four second chances were added to the dialogue list (in the right order and for the same people as the
+mod's own conversations), and the options page "Speziell" has the new line before "Zurück". A test build then changed the option
+in the running game the way the menu stores it and asked Dragomir's real, changed join condition: with the option at 4 it stayed
+closed at four guilds; at 5 it was open at four and closed at five; at "unbegrenzt" it was open at eight; an invalid value
+counted as 4 – exactly as intended. The co-op mod's world test ran as before with the package. **Not tried yet:** using the menu
+line on screen and actually talking to the four people for a second chance.
 
 ## Building it yourself
 
@@ -278,7 +286,10 @@ dem Befehl `PUSHVAR MaxNebengilden` ein `CALL XRFIX_MaxNebengilden`, beide 5 Byt
 wird „mindestens vier“. Das sind 25 Stellen in 24 Funktionen; im Log von zSpy steht `Xeres-Fixes: Nebengilden-Grenze
 einstellbar, Stellen umgestellt: 25`. Das Menü-Skript fügt Xeres' eigener Seite „Speziell“ eine Zeile unter Free Aim hinzu;
 alle Einträge von Xeres bleiben. Die vier zweiten Gelegenheiten sind eigene Gespräche, die die Original-Dialoge der Mod aufrufen –
-man hört also die Original-Stimmen.
+man hört also die Original-Stimmen. Ein neues Spiel führt sie sofort. Lädt man dagegen einen Spielstand von vor 1.3.0, nimmt
+Gothic die Liste der Gespräche aus dem Spielstand, und die vier fehlen – der Fix trägt sie deshalb gleich nach dem Laden nach, so
+wie Gothic selbst ein Gespräch anlegt; ab dem nächsten Speichern stehen sie im Spielstand (zSpy: `Xeres-Fixes: zweite
+Gelegenheiten in die Dialogliste nachgetragen: 4`).
 
 ## Teststand
 
@@ -309,9 +320,14 @@ Einstellung 4 entscheidet jede Stelle für 0 bis 4 Gilden wie das Original. `Tes
 die übersetzten Skripte der Mod – Aufbau, Namen, Felder, Zahl der Argumente und ob die Menüzeile in Xeres' Seite passt –, weil
 zParserExtender sie erst beim Spielstart übersetzt. Alle vier Tests bestehen mit Xeres' Rückkehr 1.0.9.
 
-**Im laufenden Spiel noch nicht geprüft:** die Nebengilden-Einstellung (Menüzeile, Ändern während des Spiels, Beitritt zu einer
-fünften Gilde) und die zweiten Gelegenheiten. In Spielständen, die vor 1.3.0 begonnen wurden, muss zParserExtender die neuen
-Gespräche beim Laden ergänzen – es hakt genau an dieser Stelle ein, ausprobiert ist das aber noch nicht.
+**Im laufenden Spiel geprüft** am 13. November 2026 (Xeres' Rückkehr 1.0.9 mit Union, GD3D11 und mehreren Union-Plugins), mit
+einem Spielstand aus 1.2.0 und zwei Spielinstanzen: Beide Skripte werden übersetzt, alle 25 Stellen sind umgestellt und die 20
+Zeiger-Prüfungen weiterhin, die vier zweiten Gelegenheiten wurden in die Dialogliste nachgetragen (richtig einsortiert und bei
+denselben Personen wie die Gespräche der Mod), und die Seite „Speziell“ hat die neue Zeile vor „Zurück“. Ein Testbau hat dann die
+Einstellung im laufenden Spiel so geändert, wie das Menü sie speichert, und Dragomirs echte, umgestellte Beitrittsbedingung
+gefragt: Mit Einstellung 4 blieb sie bei vier Gilden zu; mit 5 war sie bei vier offen und bei fünf zu; mit „unbegrenzt“ bei acht
+offen; ein ungültiger Wert zählte als 4 – genau wie gewollt. Der Weltentest des Coops lief mit dem Paket wie vorher. **Noch nicht
+ausprobiert:** die Menüzeile am Bildschirm bedienen und mit den vier Personen tatsächlich über eine zweite Gelegenheit sprechen.
 
 ## Selbst bauen
 

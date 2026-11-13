@@ -9,14 +9,16 @@
   schon vier Nebengilden hat. Gespeichert in der `Gothic.ini` unter `[XERES_FIXES]` als `nebengilden`.
 - **Zweite Gelegenheiten:** Die vier Angebote, die die Mod nur einmal macht (Bruderschaft im Sumpf, Diebe, Hilfe für das Alte
   Lager, Weg zum Versteck der Assassinen), kommen bei derselben Person wieder, wenn man mit voller Grenze daran vorbeigekommen
-  ist – nur, solange die Einstellung über 4 steht.
+  ist – nur, solange die Einstellung über 4 steht. In Spielständen von vor 1.3.0 trägt der Fix diese Gespräche beim Laden nach.
 - Die Belohnung für die Beliar-Schreine und Marios Aufstieg zum Ritter behandeln vier oder mehr Nebengilden so, wie sie genau
   vier behandelt haben.
 - Was sich gegenseitig ausschließt (Banditen oder Gardisten, Gardisten oder Königliche Garde, Miliz, Paladine), bleibt, wie es
   ist.
 - Am echten Skript der Mod geprüft (`Test\nebengilden_test.py`: 25 Stellen in 24 Funktionen, mit Einstellung 4 wie das
-  Original; `Test\skript_test.py`: beide Skriptdateien gegen die übersetzten Skripte der Mod). **Im laufenden Spiel noch nicht
-  geprüft.**
+  Original; `Test\skript_test.py`: beide Skriptdateien gegen die übersetzten Skripte der Mod) und im laufenden Spiel mit einem
+  Spielstand aus 1.2.0: alle Stellen umgestellt, die vier Gespräche nachgetragen, die Menüzeile da, und Dragomirs
+  Beitrittsbedingung folgt einer Änderung der Einstellung sofort. Noch nicht ausprobiert: das Menü am Bildschirm und die zweiten
+  Gelegenheiten im Gespräch.
 - Die Tests finden die Skripte der Mod jetzt auch direkt in `Data` (nicht nur in `Data\ModVDF`).
 
 ## 1.2.0 – Blutspritzer wieder da
