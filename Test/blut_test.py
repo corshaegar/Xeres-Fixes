@@ -1,6 +1,6 @@
 """blut_test.py --spiel <Xeres-Ordner> | --dat <GOTHIC.DAT> - prueft den Blutspritzer-Fix aus XERES_FIXES.D am echten Skript.
 
-Holt GOTHIC.DAT aus Data\\ModVDF\\Xeres_Scripts_DE.mod (oder nimmt --dat), liest Funktion und Laenge aus
+Holt GOTHIC.DAT aus Xeres_Scripts_DE.mod (Data\\ModVDF oder Data, oder nimmt --dat), liest Funktion und Laenge aus
 Quelltext\\SYSTEM\\AUTORUN\\XERES_FIXES.D (XRFIX_BlutFunktion) und spielt den Fix Befehl fuer Befehl nach (gleiche Regeln wie
 XRFIX_BlutFunktion/XRFIX_BlutAlt):
 
@@ -15,7 +15,7 @@ import argparse, os, re, struct, sys
 
 HIER = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HIER)
-from zeiger_test import vdf_datei, lade   # noqa: E402
+from zeiger_test import skript_datei, lade   # noqa: E402
 
 SKRIPT = os.path.join(HIER, '..', 'Quelltext', 'SYSTEM', 'AUTORUN', 'XERES_FIXES.D')
 ERWARTET = 1
@@ -105,9 +105,9 @@ def main():
     if a.dat:
         roh = open(a.dat, 'rb').read()
     else:
-        roh = vdf_datei(os.path.join(a.spiel, 'Data', 'ModVDF', 'Xeres_Scripts_DE.mod'), 'GOTHIC.DAT')
+        roh = skript_datei(a.spiel)
         if roh is None:
-            sys.exit('GOTHIC.DAT nicht in Xeres_Scripts_DE.mod gefunden')
+            sys.exit('GOTHIC.DAT nicht in Xeres_Scripts_DE.mod gefunden (Data\\ModVDF oder Data)')
     m = re.search(r'XRFIX_BlutFunktion\("([A-Z0-9_]+)",\s*(\d+)\)', open(SKRIPT, encoding='latin-1').read())
     if not m:
         sys.exit('XRFIX_BlutFunktion nicht im Skript gefunden')

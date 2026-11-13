@@ -5,7 +5,7 @@ META
   Engine = G2A;
 };
 
-// Xeres-Fixes 1.2.0 fuer Xeres' Rueckkehr 1.0.9 (10.11.2026)
+// Xeres-Fixes 1.3.0 fuer Xeres' Rueckkehr 1.0.9 (13.11.2026)
 //
 // 1. Zeiger-Pruefungen ueber 2 GB (seit 1.0.0)
 //
@@ -40,6 +40,28 @@ META
 // Muster nicht (andere Fassung), bleibt es beim Sprung: kein Absturz, aber kaum Blutspritzer. Nur, wenn das neuere LeGo die
 // Wahrnehmung verkettet (dann gibt es _B_HeroDamagePercFunc); ohne Union-Toolkit aendert sich nichts.
 //
+// 3. Mehr als vier Nebengilden, einstellbar (neu in 1.3.0)
+//
+// Xeres' Rueckkehr laesst hoechstens vier Nebengilden zu (const MaxNebengilden = 4, gezaehlt in Mod_AnzahlNebengilden). Die
+// Grenze ist jetzt eine Einstellung: Optionen -> Speziell -> Nebengilden, "4 (Original)|5|6|7|8|unbegrenzt", gespeichert in der
+// Gothic.ini unter [XERES_FIXES] nebengilden (0 = 4 wie im Original, 1 = 5 ... 4 = 8, 5 = unbegrenzt). Vorgabe ist 4: Ohne
+// Eintrag spielt sich Xeres wie bisher. Die Einstellung gilt sofort, auch im laufenden Spiel und wenn man schon vier
+// Nebengilden hat. Was sich gegenseitig ausschliesst (Banditen oder Gardisten, Gardisten oder Koenigliche Garde, Miliz,
+// Paladin ...), bleibt, wie es ist.
+//
+// Dazu ersetzt der Fix beim Start in den 22 Beitritts-Pruefungen ("Mod_AnzahlNebengilden < MaxNebengilden", bei Dexters
+// Begruessung ">=") die Konstante durch einen Aufruf von XRFIX_MaxNebengilden, das die Einstellung bei jeder Pruefung liest:
+// PUSHVAR MaxNebengilden -> CALL XRFIX_MaxNebengilden, beide 5 Bytes. Zwei Stellen nehmen "vier Nebengilden" als Freibrief,
+// weil man danach keiner Gilde mehr beitreten konnte: die Belohnung fuer alle Beliar-Schreine (B_CheckAllTeleports - der Schrein
+// in der Alten Mine zaehlt sonst nur fuer Waldlaeufer, der in der Kanalisation nur fuer Diebe) und Marios Aufstieg zum Ritter
+// (NebenQuests, wenn man kein Assassine ist). Beide pruefen "genau vier" und waeren mit mehr Gilden nie mehr erfuellt; der Fix
+// macht daraus "mindestens vier" (== -> >=, bei den Schreinen mit der Zahl 4 statt der Konstante). Bei hoechstens vier
+// Nebengilden ist das dasselbe wie im Original.
+//
+// Vier Angebote macht Xeres nur ein einziges Mal: Sumpflager (Baal Namib nach den Sumpfhaizombies), Diebe (Cassia), Altes Lager
+// (Scatty - der Weg zu den Gardisten) und das Versteck der Assassinen (Amir). Wer an einem davon mit voller Grenze vorbeikam,
+// bekommt nach dem Erhoehen bei derselben Person eine zweite Gelegenheit - nur, solange die Einstellung ueber 4 steht.
+//
 // Entfernen: Xeres_Fixes.vdf aus Data loeschen.
 
 const int XRFIX_PUSHINT = 64;
@@ -50,6 +72,9 @@ const int XRFIX_CALL    = 61;
 const int XRFIX_JMP     = 75;
 const int XRFIX_SETINST = 80;
 const int XRFIX_SUB     = 1;
+const int XRFIX_LT      = 7;
+const int XRFIX_EQ      = 16;
+const int XRFIX_GE      = 18;
 
 // Haelt die Variable mit dieser Symbolnummer einen Zeiger? (Name enthaelt "PTR")
 func int XRFIX_IstZeiger(var int sym)
@@ -253,10 +278,255 @@ func void XRFIX_Blut()
 	};
 };
 
+// 3. Nebengilden
+
+const int XRFIX_NEBENGILDEN = 4;   // Grenze im Original
+
+// Grenze aus der Gothic.ini, [XERES_FIXES] nebengilden = Nummer der Auswahl im Menue: 0 = 4 (Original) ... 4 = 8, 5 = unbegrenzt.
+// Fehlt der Eintrag oder steht etwas anderes dort, gilt 4. Wird bei jeder Pruefung neu gelesen - eine Aenderung im Menue gilt sofort
+func int XRFIX_MaxNebengilden()
+{
+	var string w; w = MEM_GetGothOpt("XERES_FIXES", "nebengilden");
+	if (Hlp_StrCmp(w, "1")) { return 5; };
+	if (Hlp_StrCmp(w, "2")) { return 6; };
+	if (Hlp_StrCmp(w, "3")) { return 7; };
+	if (Hlp_StrCmp(w, "4")) { return 8; };
+	if (Hlp_StrCmp(w, "5")) { return 99; };
+	return XRFIX_NEBENGILDEN;
+};
+
+// Vergleiche mit der Grenze im Original einer Funktion (bzw. <Name>_OLD) umstellen, Befehl fuer Befehl:
+//   PUSHVAR MaxNebengilden; PUSHVAR Mod_AnzahlNebengilden; < oder >=  ->  CALL XRFIX_MaxNebengilden; (Rest bleibt)
+//   PUSHVAR MaxNebengilden; PUSHVAR Mod_AnzahlNebengilden; ==         ->  PUSHINT 4; PUSHVAR Mod_AnzahlNebengilden; >=
+//   PUSHINT 4;              PUSHVAR Mod_AnzahlNebengilden; ==         ->  PUSHINT 4; PUSHVAR Mod_AnzahlNebengilden; >=
+// Anzahl der Stellen zurueck; ein zweiter Lauf findet nichts mehr
+func int XRFIX_NebengildenFunktion(var string name, var int laenge)
+{
+	var int start; start = XRFIX_Inhalt(ConcatStrings(name, "_OLD"));
+	if (start < 0) { start = XRFIX_Inhalt(name); };
+	if (start < 0) { return 0; };
+	var int grenze; grenze = MEM_FindParserSymbol("MAXNEBENGILDEN");
+	var int anzahl; anzahl = MEM_FindParserSymbol("MOD_ANZAHLNEBENGILDEN");
+	var int aufruf; aufruf = XRFIX_Inhalt("XRFIX_MAXNEBENGILDEN");
+	if ((grenze < 0) || (anzahl < 0) || (aufruf < 0)) { return 0; };
+	var int adr; adr = MEM_Parser.stack_stack + start;
+	var int n; n = 0;
+	var int q; q = 0;
+	var int op;
+	var int p;
+	var int wert;
+	var int vgl;
+	var int schleife; schleife = MEM_StackPos.position;
+	if (q < laenge - 10)
+	{
+		p = adr + q;
+		op = MEM_ReadByte(p);
+		if ((op == XRFIX_PUSHVAR) || (op == XRFIX_PUSHINT))
+		{
+			if (MEM_ReadByte(p + 5) == XRFIX_PUSHVAR)
+			{
+				if (MEM_ReadInt(p + 6) == anzahl)
+				{
+					wert = MEM_ReadInt(p + 1);
+					vgl = MEM_ReadByte(p + 10);
+					if ((op == XRFIX_PUSHVAR) && (wert == grenze))
+					{
+						if ((vgl == XRFIX_LT) || (vgl == XRFIX_GE))
+						{
+							MEM_WriteByte(p, XRFIX_CALL);
+							MEM_WriteInt(p + 1, aufruf);
+							n += 1;
+						}
+						else if (vgl == XRFIX_EQ)
+						{
+							MEM_WriteByte(p, XRFIX_PUSHINT);
+							MEM_WriteInt(p + 1, XRFIX_NEBENGILDEN);
+							MEM_WriteByte(p + 10, XRFIX_GE);
+							n += 1;
+						};
+					}
+					else if ((op == XRFIX_PUSHINT) && (wert == XRFIX_NEBENGILDEN) && (vgl == XRFIX_EQ))
+					{
+						MEM_WriteByte(p + 10, XRFIX_GE);
+						n += 1;
+					};
+				};
+			};
+		};
+		q += XRFIX_BefehlLaenge(op);
+		MEM_StackPos.position = schleife;
+	};
+	return n;
+};
+
+// 3. Die 24 Funktionen mit der Grenze aus Xeres' Rueckkehr 1.0.9 (Laengen = Groesse der Funktion im Skript), 25 Stellen
+func void XRFIX_Nebengilden()
+{
+	var int n; n = 0;
+	n += XRFIX_NebengildenFunktion("B_CHECKALLTELEPORTS", 268);
+	n += XRFIX_NebengildenFunktion("NEBENQUESTS", 31664);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_AMIR_HI_CONDITION", 96);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_AMIR_LEHMAR_INFO", 422);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_CASSIA_AUFNAHME_INFO", 364);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_DEXTER_AUFNAHME_CONDITION", 51);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_DEXTER_HI_INFO", 295);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_DRAGOMIR_AUFNAHME_CONDITION", 35);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_DRAGOMIR_JAGDGEBIETE_GAAN", 259);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_DRAGOMIR_JAGDGEBIETE_GRIMBALD", 400);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_DRAGOMIR_JAGDGEBIETE_GROM", 239);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_DRAGOMIR_JAGDGEBIETE_NANDOR", 349);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_FAICE_AUFNAHME_CONDITION", 39);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_FAICE_MUD_A", 187);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_GREG_AUFNAHME_CONDITION", 39);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_GREG_SCHATZSUCHE_INFO", 242);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_NAMIB_SUDD_INFO", 528);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_OLE_BEITRITT_CONDITION", 80);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_OLE_WARBEIANDRE_INFO", 333);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_SCATTY_HILFE_INFO", 177);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_SHAKIR_GAUNERWERDEN2_INFO", 268);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_SHAKIR_GAUNERWERDEN3_CONDITION", 39);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_THORUS_AUFNAHME_CONDITION", 80);
+	n += XRFIX_NebengildenFunktion("INFO_MOD_THORUS_ZETTEL_INFO", 243);
+	if (n > 0)
+	{
+		MEM_Info(ConcatStrings("Xeres-Fixes: Nebengilden-Grenze einstellbar, Stellen umgestellt: ", IntToString(n)));
+	};
+};
+
+// Zweite Gelegenheit fuer die vier Angebote, die Xeres nur einmal macht: nur bei einer Einstellung ueber 4 und mit freiem Platz
+func int XRFIX_NebengildeFrei()
+{
+	var int grenze; grenze = XRFIX_MaxNebengilden();
+	if ((grenze > XRFIX_NEBENGILDEN) && (Mod_AnzahlNebengilden < grenze)) { return TRUE; };
+	return FALSE;
+};
+
+// Sumpflager: Baal Namib bietet Guru oder Templer nur einmal an (Info_Mod_Namib_SUDD, nach den Sumpfhaizombies)
+instance Info_XRFIX_Namib_Nebengilde(C_INFO)
+{
+	npc         = Mod_2004_GUR_BaalNamib_MT;
+	nr          = 900;
+	condition   = Info_XRFIX_Namib_Nebengilde_Condition;
+	information = Info_XRFIX_Namib_Nebengilde_Info;
+	permanent   = TRUE;
+	description = "Ich will doch noch der Bruderschaft beitreten.";
+};
+
+func int Info_XRFIX_Namib_Nebengilde_Condition()
+{
+	if (Npc_KnowsInfo(hero, Info_Mod_Namib_SUDD) && (Guru_Dabei == FALSE) && (Templer_Dabei == FALSE) && XRFIX_NebengildeFrei())
+	{
+		return TRUE;
+	};
+	return FALSE;
+};
+
+func void Info_XRFIX_Namib_Nebengilde_Info()
+{
+	Info_ClearChoices(Info_XRFIX_Namib_Nebengilde);
+	Info_AddChoice(Info_XRFIX_Namib_Nebengilde, "Lieber doch nicht.", Info_XRFIX_Namib_Nebengilde_Nein);
+	Info_AddChoice(Info_XRFIX_Namib_Nebengilde, "Ich will Guru werden.", Info_XRFIX_Namib_Nebengilde_Guru);
+	Info_AddChoice(Info_XRFIX_Namib_Nebengilde, "Ich will Templer werden.", Info_XRFIX_Namib_Nebengilde_Templer);
+};
+
+func void Info_XRFIX_Namib_Nebengilde_Nein()
+{
+	Info_ClearChoices(Info_XRFIX_Namib_Nebengilde);
+};
+
+func void Info_XRFIX_Namib_Nebengilde_Guru()
+{
+	Info_Mod_Namib_SUDD_Guru();
+	Info_ClearChoices(Info_XRFIX_Namib_Nebengilde);
+};
+
+func void Info_XRFIX_Namib_Nebengilde_Templer()
+{
+	Info_Mod_Namib_SUDD_Templer();
+	Info_ClearChoices(Info_XRFIX_Namib_Nebengilde);
+};
+
+// Diebe: Cassia nimmt einen nur im ersten Gespraech auf (Info_Mod_Cassia_Aufnahme), nicht als Paladin
+instance Info_XRFIX_Cassia_Nebengilde(C_INFO)
+{
+	npc         = Mod_568_NONE_Cassia_NW;
+	nr          = 900;
+	condition   = Info_XRFIX_Cassia_Nebengilde_Condition;
+	information = Info_XRFIX_Cassia_Nebengilde_Info;
+	permanent   = TRUE;
+	description = "Ich will doch einer von euch Dieben werden.";
+};
+
+func int Info_XRFIX_Cassia_Nebengilde_Condition()
+{
+	if (Npc_KnowsInfo(hero, Info_Mod_Cassia_Aufnahme) && (Diebe_Dabei == FALSE) && (hero.guild != GIL_PAL) && XRFIX_NebengildeFrei())
+	{
+		return TRUE;
+	};
+	return FALSE;
+};
+
+func void Info_XRFIX_Cassia_Nebengilde_Info()
+{
+	Info_Mod_Cassia_Aufnahme_Ja();
+};
+
+// Altes Lager: Scatty fragt nur einmal, ob man hilft (Info_Mod_Scatty_Hilfe) - der Weg zu den Gardisten
+instance Info_XRFIX_Scatty_Nebengilde(C_INFO)
+{
+	npc         = Mod_962_STT_Scatty_MT;
+	nr          = 900;
+	condition   = Info_XRFIX_Scatty_Nebengilde_Condition;
+	information = Info_XRFIX_Scatty_Nebengilde_Info;
+	permanent   = TRUE;
+	description = "Ich helfe euch doch.";
+};
+
+func int Info_XRFIX_Scatty_Nebengilde_Condition()
+{
+	if (Npc_KnowsInfo(hero, Info_Mod_Scatty_Hilfe) && (Scatty_Start_Dia != 5) && XRFIX_NebengildeFrei())
+	{
+		return TRUE;
+	};
+	return FALSE;
+};
+
+func void Info_XRFIX_Scatty_Nebengilde_Info()
+{
+	B_SetTopicStatus(TOPIC_MOD_ALTESLAGER, LOG_RUNNING);
+	Info_Mod_Scatty_Hilfe_A();
+};
+
+// Assassinen: Amir bietet den Weg zum Versteck nur einmal an (Info_Mod_Amir_Lehmar)
+instance Info_XRFIX_Amir_Nebengilde(C_INFO)
+{
+	npc         = Mod_7199_ASS_Amir_NW;
+	nr          = 900;
+	condition   = Info_XRFIX_Amir_Nebengilde_Condition;
+	information = Info_XRFIX_Amir_Nebengilde_Info;
+	permanent   = TRUE;
+	description = "Bring mich doch zum Versteck der Assassinen.";
+};
+
+func int Info_XRFIX_Amir_Nebengilde_Condition()
+{
+	if (Npc_KnowsInfo(hero, Info_Mod_Amir_Lehmar) && (Mod_Ass_AmirLehmar == 1) && XRFIX_NebengildeFrei())
+	{
+		return TRUE;
+	};
+	return FALSE;
+};
+
+func void Info_XRFIX_Amir_Nebengilde_Info()
+{
+	Info_Mod_Amir_Lehmar_A();
+};
+
 // Die Engine ruft Init_Global bei jedem Spielstart und jedem Laden auf - danach ist Ikarus bereit (LeGo_Init)
 func void Init_Global()
 {
 	Init_Global_Old();
 	XRFIX_Zeiger();
 	XRFIX_Blut();
+	XRFIX_Nebengilden();
 };

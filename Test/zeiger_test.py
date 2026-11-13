@@ -1,7 +1,7 @@
 """zeiger_test.py --spiel <Xeres-Ordner> | --dat <GOTHIC.DAT> - prueft XERES_FIX_ZEIGER.D am echten Skript, ohne das Spiel.
 
-Holt GOTHIC.DAT aus Data\\ModVDF\\Xeres_Scripts_DE.mod (oder nimmt --dat), liest die Funktionsliste samt Laengen aus
-Quelltext\\SYSTEM\\AUTORUN\\XERES_FIX_ZEIGER.D und spielt den Patch des Skripts Byte fuer Byte nach (gleiche Regeln: Funktion bzw.
+Holt GOTHIC.DAT aus Xeres_Scripts_DE.mod (Data\\ModVDF oder Data, oder nimmt --dat), liest die Funktionsliste samt Laengen aus
+Quelltext\\SYSTEM\\AUTORUN\\XERES_FIXES.D und spielt den Patch des Skripts Byte fuer Byte nach (gleiche Regeln: Funktion bzw.
 <Name>_OLD, Bereich [Anfang, Anfang + Laenge), Muster PUSHINT 0 / PUSHVAR <Variable mit PTR im Namen> / > -> !=).
 Prueft: genau die erwarteten Stellen, kein anderes Byte veraendert, ein zweiter Lauf findet nichts, und danach gibt es im
 ganzen Skript keine Zeiger-Pruefung "> 0" mehr in diesen Funktionen. Nur lesen."""
@@ -26,6 +26,20 @@ def vdf_datei(vdf, name):
                 f.seek(off)
                 return f.read(sz)
     return None
+
+
+def skript_mod(spiel):
+    """Xeres_Scripts_DE.mod: in Data\\ModVDF (so legt der Installer sie ab) oder direkt in Data"""
+    for p in (os.path.join(spiel, 'Data', 'ModVDF', 'Xeres_Scripts_DE.mod'), os.path.join(spiel, 'Data', 'Xeres_Scripts_DE.mod')):
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def skript_datei(spiel, name='GOTHIC.DAT'):
+    """GOTHIC.DAT (oder MENU.DAT) aus Xeres_Scripts_DE.mod des Spielordners, None wenn nicht da"""
+    mod = skript_mod(spiel)
+    return vdf_datei(mod, name) if mod else None
 
 
 def lade(d):
@@ -85,9 +99,9 @@ def main():
     if a.dat:
         roh = open(a.dat, 'rb').read()
     else:
-        roh = vdf_datei(os.path.join(a.spiel, 'Data', 'ModVDF', 'Xeres_Scripts_DE.mod'), 'GOTHIC.DAT')
+        roh = skript_datei(a.spiel)
         if roh is None:
-            sys.exit('GOTHIC.DAT nicht in Xeres_Scripts_DE.mod gefunden')
+            sys.exit('GOTHIC.DAT nicht in Xeres_Scripts_DE.mod gefunden (Data\\ModVDF oder Data)')
     liste = [(m.group(1), int(m.group(2))) for m in re.finditer(r'XRFIX_Funktion\("([A-Z0-9_]+)",\s*(\d+)\)', open(SKRIPT, encoding='latin-1').read())]
     syms, code = lade(roh)
     vorher = bytes(code)

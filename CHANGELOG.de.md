@@ -2,6 +2,23 @@
 
 > *English version: [CHANGELOG.md](CHANGELOG.md).*
 
+## 1.3.0 – Mehr als vier Nebengilden (Einstellung)
+
+- **Neue Einstellung: Optionen → Speziell → Nebengilden** – „4 (Original)“, 5, 6, 7, 8 oder „unbegrenzt“. Vorgabe ist 4, es
+  ändert sich also nichts, solange man sie nicht hochsetzt. Eine Änderung gilt sofort, auch im laufenden Spiel und wenn man
+  schon vier Nebengilden hat. Gespeichert in der `Gothic.ini` unter `[XERES_FIXES]` als `nebengilden`.
+- **Zweite Gelegenheiten:** Die vier Angebote, die die Mod nur einmal macht (Bruderschaft im Sumpf, Diebe, Hilfe für das Alte
+  Lager, Weg zum Versteck der Assassinen), kommen bei derselben Person wieder, wenn man mit voller Grenze daran vorbeigekommen
+  ist – nur, solange die Einstellung über 4 steht.
+- Die Belohnung für die Beliar-Schreine und Marios Aufstieg zum Ritter behandeln vier oder mehr Nebengilden so, wie sie genau
+  vier behandelt haben.
+- Was sich gegenseitig ausschließt (Banditen oder Gardisten, Gardisten oder Königliche Garde, Miliz, Paladine), bleibt, wie es
+  ist.
+- Am echten Skript der Mod geprüft (`Test\nebengilden_test.py`: 25 Stellen in 24 Funktionen, mit Einstellung 4 wie das
+  Original; `Test\skript_test.py`: beide Skriptdateien gegen die übersetzten Skripte der Mod). **Im laufenden Spiel noch nicht
+  geprüft.**
+- Die Tests finden die Skripte der Mod jetzt auch direkt in `Data` (nicht nur in `Data\ModVDF`).
+
 ## 1.2.0 – Blutspritzer wieder da
 
 - **Die Blutspritzer bleiben.** 1.1.0 verhinderte den Absturz, indem es den Blutspritzer-Aufruf der Mod wegließ. Weil LeGo 2.9

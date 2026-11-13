@@ -1,11 +1,12 @@
 # Baut Bau\Xeres_Fixes.vdf aus Quelltext\ (Pfade im VDF = Pfade unter Quelltext\, also SYSTEM\AUTORUN\...).
 # Aufruf:  powershell -ExecutionPolicy Bypass -File Werkzeuge\bauen.ps1 [-Test -Spiel "<Xeres-Ordner>"]
-# -Test laesst vorher Test\zeiger_test.py und Test\blut_test.py am echten Skript der Mod laufen (braucht Python 3).
+# -Test laesst vorher Test\zeiger_test.py, blut_test.py, nebengilden_test.py und skript_test.py am echten Skript der Mod laufen
+# (braucht Python 3).
 # Der VDF-Schreiber stammt aus dem Teleport-Fix vom 17.10.2026 (build_vdf.ps1).
 param(
     [string]$Src = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Quelltext'),
     [string]$Out = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Bau\Xeres_Fixes.vdf'),
-    [string]$Comment = "Xeres-Fixes 1.2.0 - Zeiger-Pruefungen ueber 2 GB, Blutspritzer-Schleife (zParserExtender, 2026-11-10)",
+    [string]$Comment = "Xeres-Fixes 1.3.0 - Zeiger-Pruefungen ueber 2 GB, Blutspritzer-Schleife, Nebengilden einstellbar (zParserExtender, 2026-11-13)",
     [switch]$Test,
     [string]$Spiel = ''
 )
@@ -13,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 
 if ($Test) {
     if (-not $Spiel) { throw '-Test braucht -Spiel <Xeres-Ordner>' }
-    foreach ($t in @('zeiger_test.py', 'blut_test.py')) {
+    foreach ($t in @('zeiger_test.py', 'blut_test.py', 'nebengilden_test.py', 'skript_test.py')) {
         & python -I (Join-Path (Split-Path -Parent $PSScriptRoot) "Test\$t") --spiel $Spiel
         if ($LASTEXITCODE -ne 0) { throw "Test $t fehlgeschlagen - nichts gebaut" }
     }
